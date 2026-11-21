@@ -1,5 +1,7 @@
 # Cmdr
 
+[Download 0.2.0](https://github.com/l00nix/cmdr/releases/tag/v0.2.0) · [Integration status](integration/README.md)
+
 A small two-panel, 80x25 ANSI file manager for [ELKS](https://github.com/ghaerr/elks).
 The executable is **`cmdr`** (formerly `elxcmd` / ELX Commander).
 It uses terminal interfaces rather than HP firmware, so it can run on other ELKS
