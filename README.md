@@ -1,13 +1,13 @@
 # cmdr
 
-[Download 0.2.0](https://github.com/l00nix/ELKS-cmdr/releases/tag/v0.2.0) · [Integration status](integration/README.md) · [Discussions](https://github.com/l00nix/ELKS-cmdr/discussions)
+[Download 0.3.0](https://github.com/l00nix/ELKS-cmdr/releases/tag/v0.3.0) · [Integration status](integration/README.md) · [Discussions](https://github.com/l00nix/ELKS-cmdr/discussions)
 
 A small two-panel, 80x25 ANSI file manager for [ELKS](https://github.com/ghaerr/elks).
 The executable is **`cmdr`** (formerly `elxcmd` / ELX Commander).
 It uses terminal interfaces rather than HP firmware, so it can run on other ELKS
 machines with a suitable console or serial terminal.
 
-## Development changes (0.3.0-dev)
+## Changes in 0.3.0
 
 Directory panels now grow dynamically, with compact filename storage instead of
 128 fixed slots. Capacity depends on available memory; an allocation failure or
@@ -20,7 +20,7 @@ Verified over Telnet on a physical PPC 512: both panels list all 206 `/bin`
 entries, file operations and external-shell return work, and quit/Ctrl-C restore
 the terminal. Host/emulator tests also cover 600-file directories; larger PPC
 fixtures remain slow. See [validation details](docs/TESTING.md).
-The stable EPT package below remains 0.2.0 until a new release is published.
+Upgrade an existing installation with `ept install cmdr` using the repository below.
 
 ## Screenshots
 
@@ -49,7 +49,7 @@ the standalone rename. [Original BMP](docs/images/cmdr.bmp) ·
 
 ## Install with EPT
 
-cmdr 0.2.0 is available in the **stable catalogue** of the
+cmdr 0.3.0 is available in the **stable catalogue** of the
 [8088retro EPT repository](http://ept.8088retro.com/).
 With ELKS networking running and EPT installed, set the `REPO` line in
 `/etc/ept.cfg` to the following (keep a copy of your previous configuration):
@@ -68,11 +68,11 @@ TERM=ansi cmdr /etc /lib
 
 Use plain `http://` for this vintage-client repository. No `-n` option is needed.
 The package installs `/bin/cmdr`, `/lib/cmdr/copying` and `/lib/cmdr/usage.txt`.
-The installation and all three file hashes were verified on a physical
-Amstrad PPC 512 running ELKS 0.9.2. Run cmdr on the local console: the tested
-PPC Telnet session could install the package and run `cmdr --version`, but
-full-screen startup failed with "No such device". The EPT-installed binary
-was separately launched on the physical console.
+Version 0.3.0 fixes full-screen Telnet startup as well as the fixed 128-entry
+listing limit. Both local console and ANSI Telnet are supported; the UI needs
+at least 80 columns and 25 rows. To upgrade just cmdr, run `ept install cmdr`
+again. `ept upgrade` considers all installed packages.
+See [validation details](docs/TESTING.md) for hardware results and limits.
 
 If EPT is not installed yet, follow the repository's
 [EPT bootstrap instructions](http://ept.8088retro.com/).

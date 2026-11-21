@@ -1,4 +1,4 @@
-Cmdr 0.3.0-dev
+Cmdr 0.3.0
 cmdr [left-directory [right-directory]]
 Tab switches panels; arrows select; Enter opens a directory.
 F1/? help, F2/P path, F3/V view, F4/E vi, F5/C copy, F6/M move,

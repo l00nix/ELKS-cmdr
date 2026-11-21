@@ -4,7 +4,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <signal.h>
-#define VERSION "0.3.0-dev"
+#define VERSION "0.3.0"
 #define PATH_CAP 256
 #define NAME_CAP 64
 #define PAGE_ROWS 17

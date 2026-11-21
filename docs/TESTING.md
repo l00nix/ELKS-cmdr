@@ -1,3 +1,18 @@
+# Release 0.3.0
+
+Rebuilt from the merged changes with the final 0.3.0 version string on
+21 November 2026. Host tests, native file/UI tests under isolated elksemu,
+8086 ISA audit and near-memory audit passed. Staged installed files were packed
+into the release ZIP and verified against the native build. The final near-memory
+budget is 60,784 bytes before argv/environment.
+
+Release executable SHA-256:
+`c9c7d25c2bca8acebf4eccbbe8a9a5f0dad44c4b1a987066b6e7db8e5b355496`.
+
+EPT publication and the physical upgrade test are recorded separately below
+once complete. The development-build hardware results and large-directory
+performance limitation follow.
+
 # Development validation: 0.3.0-dev
 
 Validated on 21 November 2026 with the same upstream ELKS/IA16 environment
