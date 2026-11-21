@@ -10,9 +10,10 @@
 #include <termios.h>
 #include <errno.h>
 #include <sys/ioctl.h>
-#include <fcntl.h>
+#include <sys/time.h>
+#include <sys/select.h>
 static struct termios saved;
-static int active,inputfd=-1,have_saved;
+static int active,have_saved;
 static void stopped(int sig){(void)sig;stopping=1;}
 void at(int row,int col){printf("\033[%d;%dH",row+1,col+1);}
 void field(int row,int col,int width,const char *s,int reverse) {
@@ -26,7 +27,7 @@ void field(int row,int col,int width,const char *s,int reverse) {
 void terminal_close(void) {
     if(!active)return;
     fputs("\033[0m\033[?25h\033[H\033[2J",stdout);fflush(stdout);
-    tcsetattr(0,TCSAFLUSH,&saved);close(inputfd);inputfd=-1;active=0;
+    tcsetattr(0,TCSAFLUSH,&saved);active=0;
 }
 int terminal_open(void) {
     struct termios t;
@@ -35,13 +36,13 @@ int terminal_open(void) {
     {struct winsize ws;if(ioctl(1,TIOCGWINSZ,&ws)==0 && ws.ws_col && ws.ws_row && (ws.ws_col<80 || ws.ws_row<25)){errno=EINVAL;return -1;}}
 #endif
     if(!have_saved){if(tcgetattr(0,&saved)<0)return -1;have_saved=1;}
-    /* A separate open description keeps stdout blocking even when stdin and
-     * stdout originally share one terminal descriptor (as on a shell/PTY). */
-    inputfd=open("/dev/tty",O_RDONLY|O_NONBLOCK);if(inputfd<0)return -1;
+    /* fm's tty layer operates on inherited terminal descriptors. ELKS
+     * telnetd sessions need not have a controlling /dev/tty. select() lets
+     * us read stdin without setting O_NONBLOCK on a shared stdout handle. */
     t=saved;t.c_lflag&=~(ECHO|ECHONL|ICANON|IEXTEN);t.c_lflag|=ISIG;
     t.c_iflag&=~(ICRNL|INLCR|IGNCR|ISTRIP|IXON|IXOFF);
     t.c_cc[VMIN]=1;t.c_cc[VTIME]=0;
-    if(tcsetattr(0,TCSAFLUSH,&t)<0){close(inputfd);inputfd=-1;return -1;}
+    if(tcsetattr(0,TCSAFLUSH,&t)<0)return -1;
     active=1;signal(SIGINT,stopped);signal(SIGTERM,stopped);signal(SIGHUP,stopped);signal(SIGQUIT,stopped);
     fputs("\033[0m\033[H\033[2J\033[?25l",stdout);return 0;
 }
@@ -67,16 +68,17 @@ int decodekey(const char *s) {
     return 0;
 }
 int key(void) {
-    char s[24];int n=0,idle=0;ssize_t r;unsigned char c;
+    char s[24];int n=0,ready;ssize_t r;fd_set readers;struct timeval timeout;unsigned char c;
     fflush(stdout);
     while(!stopping) {
-        r=read(inputfd,&c,1);
-        if(r<0 && errno!=EINTR && errno!=EAGAIN){stopping=1;return -1;}
-        if(r<=0) {
-            if(n && ++idle>=10)return n==1?27:0;
-            usleep(20000UL);continue;
-        }
-        idle=0;
+        FD_ZERO(&readers);FD_SET(0,&readers);
+        timeout.tv_sec=0;timeout.tv_usec=200000L;
+        ready=select(1,&readers,NULL,NULL,&timeout);
+        if(ready<0){if(errno==EINTR)continue;stopping=1;return -1;}
+        if(!ready){if(n)return n==1?27:0;continue;}
+        r=read(0,&c,1);
+        if(r<0 && (errno==EINTR || errno==EAGAIN))continue;
+        if(r<=0){stopping=1;return -1;}
         if(!n && c!=27)return c;
         s[n++]=(char)c;s[n]=0;
         if(n==2 && c!='[' && c!='O')return decodekey(s);

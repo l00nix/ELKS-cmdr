@@ -46,7 +46,7 @@ static void draw(void) {
             } else if(!q->count && !r)strcpy(b,q->failed?" [Cannot read directory]":" [Empty directory]");
             field(4+r,p*40,39,b,current==p && i==q->selected && i<q->count);
         }
-        snprintf(b,sizeof(b),"%d/%d%s",q->count?q->selected+1:0,q->count,q->limited?"  INCOMPLETE LIST (128/name/path limit)":" entries");
+        snprintf(b,sizeof(b),"%d/%d%s",q->count?q->selected+1:0,q->count,q->limited&LIMIT_MEMORY?" INCOMPLETE LIST (memory)":q->limited?" INCOMPLETE LIST (name/path/stat)":" entries");
         field(21,p*40,39,b,0);
     }
     for(r=1;r<=21;r++)field(r,39,1,"|",0);
@@ -80,13 +80,13 @@ static void enter(void) {
     if(!e)return;
     if(!S_ISDIR(e->mode)){strcpy(message,"Enter opens folders; F3/V views regular files.");return;}
     if(joinpath(path,p->path,e->name)<0 || canonical(path,path)<0){error_message("Open directory");return;}
-    strcpy(p->path,path);p->count=p->selected=p->top=0;
+    strcpy(p->path,path);freepanel(p);p->selected=p->top=0;
     if(loadpanel(p)<0)error_message("Read directory");else message[0]=0;
 }
 static void parent(void) {
     char path[PATH_CAP];struct panel *p=&panels[current];
     if(joinpath(path,p->path,"..")<0 || canonical(path,path)<0){error_message("Parent");return;}
-    strcpy(p->path,path);p->count=p->selected=p->top=0;
+    strcpy(p->path,path);freepanel(p);p->selected=p->top=0;
     if(loadpanel(p)<0)error_message("Read directory");else message[0]=0;
 }
 static void change_path(void) {
@@ -96,7 +96,7 @@ static void change_path(void) {
     if(input[0]=='/')strcpy(path,input);
     else if(joinpath(path,p->path,input)<0){error_message("Path");return;}
     if(canonical(path,path)<0){error_message("Directory");return;}
-    strcpy(p->path,path);p->count=p->selected=p->top=0;
+    strcpy(p->path,path);freepanel(p);p->selected=p->top=0;
     if(loadpanel(p)<0)error_message("Read directory");else message[0]=0;
 }
 static void transfer(int moving) {
@@ -189,7 +189,7 @@ static void external(int edit) {
 }
 static void help_screen(void) {
     static const char *lines[]={
-        " Cmdr 0.2.0 - keyboard guide",
+        " Cmdr " VERSION " - keyboard guide",
         "Tab: change active panel. Arrows: select. Enter: open folder or view file.",
         "Left/Backspace: parent. Home/End/PgUp/PgDn: navigate the list.",
         "F1 / ?   Help                 F6 / M   Move to the other panel",
@@ -202,7 +202,7 @@ static void help_screen(void) {
         "Existing targets are refused. For a rename, point both panels at one folder.",
         "Move copies then removes the source. On failure, check both panels.",
         "No recursive copy/delete, multi-selection, preserved timestamps or ownership.",
-        "Directories over 128 entries / unsupported names show INCOMPLETE LIST.",
+        "Low memory / unreadable or unsupported entries show INCOMPLETE LIST.",
         "Keep the same files unchanged in other programs while copying or moving.",
         "Ctrl-C exits through terminal cleanup. Exit before using HP suspend.",
         "Press any key to return."
@@ -249,5 +249,5 @@ int main(int argc,char **argv) {
         case 'r':case 'R':reload();break;
         }
     }
-    terminal_close();return 0;
+    terminal_close();for(i=0;i<2;i++)freepanel(&panels[i]);return 0;
 }

@@ -1,3 +1,71 @@
+# Development validation: 0.3.0-dev
+
+Validated on 21 November 2026 with the same upstream ELKS/IA16 environment
+recorded for 0.2.0 below.
+
+- Host file-operation and real-PTY tests: PASS.
+- AddressSanitizer and UndefinedBehaviorSanitizer runs of the same tests: PASS.
+- Native 8086 build, instruction audit and near-memory audit: PASS.
+- Native file-operation and real-PTY tests under isolated elksemu: PASS.
+- 600 files plus `..`, complete sorted enumeration and 20 reloads: PASS.
+- End/refresh/copy beyond entry 128 without a controlling terminal: PASS.
+- Injected allocation failures in array and filename allocation: incomplete
+  listing reported, refresh recovers, and storage can be freed safely.
+- Existing copy/move/delete safety and terminal-restoration checks: PASS.
+
+The native build uses a 48 KiB heap and 4 KiB stack; the audited static+heap+stack
+budget is 60,800 bytes before arguments/environment, below the 65,520-byte
+segment budget with a further 1 KiB reserve. Capacity is memory-dependent,
+not unlimited. Name/path limits remain unchanged.
+
+`fm` was used as a reference for dynamically allocated listings and working
+with inherited terminal descriptors. cmdr keeps its own UI and file operations.
+The native allocator is unchanged. Array growth allocates the replacement before
+freeing the old array, so allocation failure leaves the collected entries valid.
+
+The test-only elksemu preparation now also fixes two guest-memory overruns:
+`fd_set` is 32 bits in ELKS, and Linux `d_reclen` is not a filename length.
+Directory conversion copies at most ELKS MAXNAMLEN (26) bytes and terminates the
+name. These changes affect the isolated host emulator, not the PPC kernel or
+application. The earlier LP64 timeval conversion fix is retained.
+
+## Physical PPC 512 / ELKS 0.9.2
+
+The development executable SHA-256 is
+`f7f6c62c372c6ff231e2a6b632bd5cabff5269df1b7b87df74a4f6a3c47008ef`.
+Its FTP transfer was verified byte-for-byte before testing.
+
+- Telnet startup with inherited terminal descriptors: PASS.
+- Both panels showing all 206 `/bin` entries; End reaches entry 206 and refresh
+  retains selection with no incomplete-list warning: PASS.
+- Temporary-file viewing, copy cancellation, confirmed copy, overwrite refusal,
+  move, mkdir, enter/parent navigation and empty-directory deletion: PASS.
+- Destination contents after copy and move verified byte-for-byte by FTP; source
+  removed after move, and the temporary directory removed: PASS.
+- Help, external shell and return to cmdr: PASS.
+- Normal quit returns status 0; `stty` output identical before/after: PASS.
+- Ctrl-C exits and restores the same terminal settings: PASS.
+
+A larger hardware fixture was attempted. Extracting 1,200 test files made remote
+services slow to respond; the test's `tar` process was stopped. The resulting
+590/443-file directories did not reach the first cmdr screen within 120 seconds.
+The cause of that delay is not isolated. These are **not** claimed as passing
+large-directory hardware tests; 600-entry coverage above is host/emulator only.
+A subsequent small-directory Telnet run and the 206-entry tests passed.
+
+The stable EPT package remains 0.2.0. The tested development binary is staged at
+`/root/cmdnew21/cmdr`; `/bin/cmdr` and the EPT registry are unchanged.
+
+The same development binary also passed physical-console startup with all 206
+`/bin` entries and SIGTERM cleanup. The original console launcher and inittab
+were verified restored/unchanged after capture. [Console screenshot](images/ppc-dynamic.png).
+
+Upstream `fm` was also captured from the physical console for comparison:
+[fm screenshot](images/ppc-fm.png). Both PNGs render actual B8000 video memory
+using the previously captured PPC BIOS font; the 200 scanlines are doubled
+vertically. Raw character/attribute data is retained alongside each PNG.
+They are not terminal mockups.
+
 # Validation for 0.2.0
 
 Validated on 21 November 2026 against upstream ELKS

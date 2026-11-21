@@ -7,6 +7,21 @@ The executable is **`cmdr`** (formerly `elxcmd` / ELX Commander).
 It uses terminal interfaces rather than HP firmware, so it can run on other ELKS
 machines with a suitable console or serial terminal.
 
+## Development changes (0.3.0-dev)
+
+Directory panels now grow dynamically, with compact filename storage instead of
+128 fixed slots. Capacity depends on available memory; an allocation failure or
+unreadable/unsupported entry produces an explicit **INCOMPLETE LIST** warning.
+The native build reserves a 48 KiB heap within its audited 64 KiB data segment.
+
+Terminal input now uses the inherited stdin descriptor and `select()`, removing
+the dependency on opening `/dev/tty` that prevented PPC Telnet startup.
+Verified over Telnet on a physical PPC 512: both panels list all 206 `/bin`
+entries, file operations and external-shell return work, and quit/Ctrl-C restore
+the terminal. Host/emulator tests also cover 600-file directories; larger PPC
+fixtures remain slow. See [validation details](docs/TESTING.md).
+The stable EPT package below remains 0.2.0 until a new release is published.
+
 ## Screenshots
 
 Cmdr 0.2.0 running on a physical Amstrad PPC 512 with ELKS 0.9.2,
@@ -88,8 +103,7 @@ TERM=ansi cmdr /root /tmp
 | F10 / Q | Quit |
 
 Copy, move and delete require confirmation. Copy/move refuse existing destinations.
-Directory trees are not copied or moved recursively. Listings hold up to 128 entries
-per panel and report truncation. The UI is fixed at 80x25. No mouse or Nano-X is required.
+Directory trees are not copied or moved recursively. Listings grow with available memory and report incomplete results. The UI is fixed at 80x25. No mouse or Nano-X is required.
 
 ## Build and install
 
