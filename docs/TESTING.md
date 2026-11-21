@@ -14,7 +14,9 @@ and IA16 GCC 6.3.0. The build explicitly targets i8086.
 
 Direct builds, external builds and the staged executables had identical SHA-256
 checksums. The published ZIPs contain the tested executable, license and usage guide.
-The full EPT Docker/server publishing cycle was not run; server inclusion is pending.
+The original EPT Docker/server publishing cycle was not run; inclusion on that
+server is pending. Independent 8088retro publication and PPC installation are
+recorded below.
 
 The emulator test copy uses the isolated LP64 `select` timeval fix supplied by
 `tests/prepare_emulator.py` in Cmdr. This changes the host test harness, not the
@@ -35,3 +37,26 @@ was verified byte-for-byte; the original console launcher was restored afterward
 [Hardware screenshots and reproducible capture details](images/README.md) are
 included. This limited smoke test does not cover physical-keyboard interaction,
 copy/move/delete on the PPC, or retesting the standalone binary on the HP.
+
+## EPT publication and physical PPC installation — 21 November 2026
+
+- cmdr 0.2.0 was published in the stable catalogue at
+  <http://ept.8088retro.com/index>, using the unmodified release ZIP.
+- The public index, package files and source archive returned exact expected
+  bytes with Content-Length, no redirects and no content compression.
+- On a physical Amstrad PPC 512 running ELKS 0.9.2, `ept install cmdr` downloaded
+  the package from that public repository and exited successfully.
+- `/bin/cmdr`, `/lib/cmdr/copying` and `/lib/cmdr/usage.txt` were read back and
+  matched the package SHA-256 hashes. Modes were 755, 644 and 644 respectively.
+- EPT registered cmdr 0.2.0 while preserving unrelated installed-package records.
+- `cmdr --version` passed over Telnet. Full-screen startup in that Telnet session
+  failed with "Cmdr: needs an 80x25 text terminal: No such device"; interactive
+  Telnet operation is not validated.
+- The EPT-installed `/bin/cmdr` also started on the physical console. A concurrent
+  scrcap test wrote to the same display, so this run is not presented as a clean
+  screenshot. Earlier physical-console captures use this identical binary.
+- The original `/etc/ept.cfg` and cached catalogues were restored afterward;
+  the installed cmdr files and its EPT registration were retained.
+
+This installation check supplements the earlier physical-console screenshots.
+It does not claim a new copy/move/delete regression test on hardware.

@@ -1,6 +1,6 @@
-# ELKS-cmdr
+# cmdr
 
-[Download 0.2.0](https://github.com/l00nix/ELKS-cmdr/releases/tag/v0.2.0) · [Integration status](integration/README.md)
+[Download 0.2.0](https://github.com/l00nix/ELKS-cmdr/releases/tag/v0.2.0) · [Integration status](integration/README.md) · [Discussions](https://github.com/l00nix/ELKS-cmdr/discussions)
 
 A small two-panel, 80x25 ANSI file manager for [ELKS](https://github.com/ghaerr/elks).
 The executable is **`cmdr`** (formerly `elxcmd` / ELX Commander).
@@ -31,6 +31,38 @@ captured with ELXcap on 19 October 2026.
 The original 640×200 pixels are preserved. The displayed names and versions predate
 the standalone rename. [Original BMP](docs/images/cmdr.bmp) ·
 [Capture details](docs/images/README.md).
+
+## Install with EPT
+
+cmdr 0.2.0 is available in the **stable catalogue** of the
+[8088retro EPT repository](http://ept.8088retro.com/).
+With ELKS networking running and EPT installed, set the `REPO` line in
+`/etc/ept.cfg` to the following (keep a copy of your previous configuration):
+
+```ini
+REPO=http://ept.8088retro.com
+```
+
+Then run as root:
+
+```sh
+ept update
+ept install cmdr
+TERM=ansi cmdr /etc /lib
+```
+
+Use plain `http://` for this vintage-client repository. No `-n` option is needed.
+The package installs `/bin/cmdr`, `/lib/cmdr/copying` and `/lib/cmdr/usage.txt`.
+The installation and all three file hashes were verified on a physical
+Amstrad PPC 512 running ELKS 0.9.2. Run cmdr on the local console: the tested
+PPC Telnet session could install the package and run `cmdr --version`, but
+full-screen startup failed with "No such device". The EPT-installed binary
+was separately launched on the physical console.
+
+If EPT is not installed yet, follow the repository's
+[EPT bootstrap instructions](http://ept.8088retro.com/).
+The [upstream EPT recipe PR](https://github.com/sammothxc/ept/pull/12) is separate
+from this published 8088retro package and is still awaiting maintainer acceptance.
 
 ## Use
 
@@ -75,8 +107,8 @@ layout. Output is `build/cmdr`. Install paths are `/bin/cmdr` and
 The staging root must exist on the host; do not point it at an unintended filesystem.
 
 [External build and EPT integration](integration/README.md) includes the package
-recipe. Upstream registration and EPT server publication are separate steps;
-the recipe alone does not make the package available from the default EPT server.
+recipe. The 8088retro package is published; registration and deployment on the
+original EPT server remain separate maintainer steps.
 
 ## Tests and status
 
