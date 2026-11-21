@@ -1,13 +1,28 @@
-# Cmdr
+# ELKS-cmdr
 
-[Download 0.2.0](https://github.com/l00nix/cmdr/releases/tag/v0.2.0) · [Integration status](integration/README.md)
+[Download 0.2.0](https://github.com/l00nix/ELKS-cmdr/releases/tag/v0.2.0) · [Integration status](integration/README.md)
 
 A small two-panel, 80x25 ANSI file manager for [ELKS](https://github.com/ghaerr/elks).
 The executable is **`cmdr`** (formerly `elxcmd` / ELX Commander).
 It uses terminal interfaces rather than HP firmware, so it can run on other ELKS
 machines with a suitable console or serial terminal.
 
-## Screenshot
+## Screenshots
+
+Cmdr 0.2.0 running on a physical Amstrad PPC 512 with ELKS 0.9.2,
+captured on 21 November 2026. These images render the actual 80x25 console
+video memory using the BIOS font read from the same machine. Scan lines are
+doubled vertically for readability; they are not emulator or terminal mockups.
+
+![Cmdr 0.2.0 on the PPC: system configuration and libraries](docs/images/ppc-etc.png)
+
+![Cmdr 0.2.0 on the PPC: executables and libraries](docs/images/ppc-panels.png)
+
+The second capture demonstrates the explicit incomplete-list warning for
+`/bin`, which exceeds the current 128-entry panel limit.
+[Raw captures and provenance](docs/images/README.md).
+
+### Earlier HP 200LX capture
 
 ![Commander file manager after copying alpha.txt](docs/images/cmdr.png)
 

@@ -27,5 +27,11 @@ mappings, interactive navigation/viewing, confirmation, and terminal restoration
 Host fault injection covers short writes, disk-full rollback and failed source
 removal after a move copy.
 
-The predecessor ELX Commander was exercised on HP 200LX hardware. This standalone
-build has not yet been retested on physical hardware or other ELKS machines.
+The predecessor ELX Commander was exercised on HP 200LX hardware. On
+21 November 2026, the standalone 0.2.0 release binary was also exercised on a
+physical Amstrad PPC 512 running ELKS 0.9.2: startup, `/etc`, `/bin` and `/lib`
+listings, the 128-entry warning, and SIGTERM console cleanup. The binary transfer
+was verified byte-for-byte; the original console launcher was restored afterward.
+[Hardware screenshots and reproducible capture details](images/README.md) are
+included. This limited smoke test does not cover physical-keyboard interaction,
+copy/move/delete on the PPC, or retesting the standalone binary on the HP.

@@ -6,6 +6,11 @@ Integration submissions (pending maintainer acceptance):
 - [EPT recipe PR #12](https://github.com/sammothxc/ept/pull/12).
 - Recipes are also committed to [l00nix/ept](https://github.com/l00nix/ept/tree/main/recipes).
 
+As checked on 21 November 2026, cmdr is absent from both the stable and nightly
+catalogues at <http://ept.8088retro.com/>. The EPT PR is open and unmerged;
+a recipe submission is not a published binary package. Repository URLs now use
+`l00nix/ELKS-cmdr`; the installed command and package name remain `cmdr`.
+
 The [companion patch](elks-apps.patch) adds both applications to `buildext.sh` and
 `elkscmd/ExtApplications`. It was tested against ELKS `df2a61c5d72415ff4825aab33be427de9306c230`.
 Apply from a clean ELKS checkout with `git am /path/to/elks-apps.patch`, then run
