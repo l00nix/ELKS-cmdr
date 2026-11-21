@@ -25,9 +25,13 @@ with tempfile.TemporaryDirectory(prefix='cmdr-') as d:
  run('delete',p,ok=False);assert (p/'moved').read_bytes()==data
  (p/'empty').mkdir();run('delete',p/'empty');assert not (p/'empty').exists()
  run('delete',p/'moved');assert not (p/'moved').exists()
- for i in range(135):(p/('f%03d'%i)).touch()
- listing=run('list',p);assert 'limited=1' in listing and 'count=128' in listing
+ large=p/'large';large.mkdir()
+ for i in range(600):(large/('f%03d'%i)).touch()
+ listing=run('list',large).splitlines()
+ assert listing[0]=='count=601 limited=0 failed=0',listing[0]
+ assert listing[1:]==['..']+['f%03d'%i for i in range(600)],listing[-5:]
+ assert run('repeat',large).splitlines()==listing
  run('list',p/'absent',ok=False)
  for seq,key in [('\x1b[A',256),('\x1b[B',257),('\x1b1',280),('\x1b0',289),('\x1bOP',280),('\x1b[15~',284),('\x1b[[A',280)]:
   assert int(run('key',seq))==key
-print('PASS: binary copy, overwrite/self-copy refusal, cancellation cleanup, move, symlink/device handling, empty-only rmdir, directory limits and key mappings')
+print('PASS: binary copy, overwrite/self-copy refusal, cancellation cleanup, move, symlink/device handling, empty-only rmdir, 600-entry directory completeness, sorting and key mappings')

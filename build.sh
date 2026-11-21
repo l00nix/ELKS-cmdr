@@ -21,11 +21,11 @@ flags="-Os -melks-libc -march=i8086 -mtune=i8086 -mcmodel=small -mno-segment-rel
 for name in main files terminal; do
     "$CC" $flags -Isrc -I"$ELKS/include" -I"$ELKS/libc/include" -I"$ELKS/elks/include" -c "src/$name.c" -o "$BUILD/obj/$name.o"
 done
-"$CC" $flags -Wl,--gc-sections,-Map,"$BUILD/cmdr.map" -maout-heap=8192 -maout-stack=4096 \
+"$CC" $flags -Wl,--gc-sections,-Map,"$BUILD/cmdr.map" -maout-heap=49152 -maout-stack=4096 \
     "$BUILD/obj/main.o" "$BUILD/obj/files.o" "$BUILD/obj/terminal.o" -o "$BUILD/cmdr"
 "$SIZE" "$BUILD/cmdr.elf"
 "$OBJDUMP" -d -z --insn-width=16 -M intel,i8086 "$BUILD/cmdr.elf" > "$BUILD/cmdr.dis"
 python3 toolchain/isa-audit.py "$BUILD/cmdr" "$BUILD/cmdr.elf" "$BUILD/cmdr.dis" --map "$BUILD/cmdr.map" --output "$BUILD/cmdr-audit.json"
 "$CC" --version > "$BUILD/compiler-version.txt"
-"$CC" $flags -Isrc -I"$ELKS/include" -I"$ELKS/libc/include" -I"$ELKS/elks/include" -Wl,--gc-sections -maout-heap=8192 -maout-stack=4096 \
+"$CC" $flags -Isrc -I"$ELKS/include" -I"$ELKS/libc/include" -I"$ELKS/elks/include" -Wl,--gc-sections -maout-heap=49152 -maout-stack=4096 \
     tests/ops.c src/files.c src/terminal.c -o "$BUILD/test-ops"

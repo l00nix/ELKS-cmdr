@@ -4,18 +4,19 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <signal.h>
-#define VERSION "0.2.0"
+#define VERSION "0.3.0-dev"
 #define PATH_CAP 256
 #define NAME_CAP 64
-#define ENTRY_CAP 128
 #define PAGE_ROWS 17
-struct entry { char name[NAME_CAP]; unsigned long size; mode_t mode; };
-struct panel { char path[PATH_CAP]; struct entry entries[ENTRY_CAP]; int count,selected,top,limited,failed; };
+struct entry { char *name; unsigned long size; mode_t mode; };
+struct panel { char path[PATH_CAP]; struct entry *entries; int capacity,count,selected,top,limited,failed; };
 extern volatile int stopping;
 extern char message[160];
 int joinpath(char *out,const char *dir,const char *name);
 int canonical(char *out,const char *path);
+enum { LIMIT_MEMORY=1, LIMIT_ENTRY=2 };
 int loadpanel(struct panel *p);
+void freepanel(struct panel *p);
 int copyfile(const char *src,const char *dst,int moving);
 int removeitem(const char *path);
 int validname(const char *name);

@@ -7,6 +7,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <errno.h>
+#include <limits.h>
 
 char message[160];
 void error_message(const char *action) {
@@ -34,27 +35,51 @@ static int compare(const void *aa,const void *bb) {
     if(S_ISDIR(a->mode)!=S_ISDIR(b->mode))return S_ISDIR(a->mode)?-1:1;
     return strcmp(a->name,b->name);
 }
+/* Like ELKS fm, listings grow on demand. Store names separately so short
+ * ELKS filenames do not each consume a NAME_CAP-byte slot in the near heap. */
+void freepanel(struct panel *p) {
+    int i;
+    for(i=0;i<p->count;i++)free(p->entries[i].name);
+    free(p->entries);p->entries=NULL;p->capacity=p->count=0;
+}
+static int reserve_entry(struct panel *p) {
+    struct entry *entries;size_t max,n;
+    if(p->count<p->capacity)return 0;
+    max=(size_t)-1/sizeof(struct entry);
+    if(max>INT_MAX)max=INT_MAX;
+    if((unsigned)p->capacity>=max){errno=ENOMEM;return -1;}
+    n=(unsigned)p->capacity;
+    n=max-n<32?max:n+32;
+    entries=malloc(n*sizeof(struct entry));
+    if(!entries)return -1;
+    if(p->count)memcpy(entries,p->entries,(size_t)p->count*sizeof(struct entry));
+    free(p->entries);
+    p->entries=entries;p->capacity=(int)n;return 0;
+}
 int loadpanel(struct panel *p) {
     DIR *d;struct dirent *de;struct stat st;char path[PATH_CAP],keep[NAME_CAP];int e=0;
     keep[0]=0;
     if(p->selected>=0 && p->selected<p->count)strcpy(keep,p->entries[p->selected].name);
-    p->count=p->limited=p->failed=0;
+    freepanel(p);p->limited=p->failed=0;
     d=opendir(p->path);
     if(!d){p->failed=1;p->selected=p->top=0;return -1;}
     for(;;) {
         errno=0;de=readdir(d);if(!de){e=errno;break;}
         if(!strcmp(de->d_name,"."))continue;
         if(!strcmp(p->path,"/") && !strcmp(de->d_name,".."))continue;
-        if(strlen(de->d_name)>=NAME_CAP || p->count>=ENTRY_CAP){p->limited=1;continue;}
-        if(joinpath(path,p->path,de->d_name)<0){p->limited=1;continue;}
-        if(lstat(path,&st)<0){p->limited=1;continue;}
+        if(strlen(de->d_name)>=NAME_CAP){p->limited|=LIMIT_ENTRY;continue;}
+        if(joinpath(path,p->path,de->d_name)<0){p->limited|=LIMIT_ENTRY;continue;}
+        if(lstat(path,&st)<0){p->limited|=LIMIT_ENTRY;continue;}
+        if(reserve_entry(p)<0){p->limited|=LIMIT_MEMORY;break;}
+        p->entries[p->count].name=malloc(strlen(de->d_name)+1);
+        if(!p->entries[p->count].name){p->limited|=LIMIT_MEMORY;break;}
         strcpy(p->entries[p->count].name,de->d_name);
         p->entries[p->count].mode=st.st_mode;
         p->entries[p->count++].size=(unsigned long)st.st_size;
     }
     if(closedir(d)<0 && !e)e=errno;
-    if(e){p->count=p->selected=p->top=0;p->failed=1;errno=e;return -1;}
-    qsort(p->entries,p->count,sizeof(struct entry),compare);
+    if(e){freepanel(p);p->selected=p->top=0;p->failed=1;errno=e;return -1;}
+    if(p->count>1)qsort(p->entries,p->count,sizeof(struct entry),compare);
     if(p->selected>=p->count)p->selected=p->count?p->count-1:0;
     {int i;for(i=0;i<p->count;i++)if(!strcmp(keep,p->entries[i].name)){p->selected=i;break;}}
     p->top=0;return 0;

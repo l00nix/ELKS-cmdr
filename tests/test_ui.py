@@ -4,12 +4,13 @@ import os,pty,fcntl,termios,struct,subprocess,select,time,tempfile,sys,signal
 from pathlib import Path
 command=[str(Path(x).resolve()) for x in sys.argv[1:]]
 class UI:
- def __init__(self,left,right,env=None):
+ def __init__(self,left,right,env=None,controlling=True):
   self.master,self.slave=pty.openpty()
   fcntl.ioctl(self.slave,termios.TIOCSWINSZ,struct.pack('HHHH',25,80,0,0))
   self.saved=termios.tcgetattr(self.slave)
   def session():
-   os.setsid();fcntl.ioctl(0,termios.TIOCSCTTY,0)
+   os.setsid()
+   if controlling:fcntl.ioctl(0,termios.TIOCSCTTY,0)
   self.p=subprocess.Popen([sys.executable,str(Path(__file__).with_name('pty_child.py'))]+command+[str(left),str(right)],stdin=self.slave,stdout=self.slave,stderr=self.slave,preexec_fn=session,env={**os.environ,**(env or {})})
   self.data=b'';self.mark=0
  def wait(self,text,timeout=6):
@@ -56,6 +57,15 @@ with tempfile.TemporaryDirectory(prefix='cmdr-ui-') as d:
  except BaseException:
   if ui.p.poll() is None:ui.p.kill();ui.p.wait()
   raise
+ # Inherited terminal with no controlling /dev/tty, as on the PPC Telnet.
+ for i in range(600):
+  (left/('f%03d'%i)).touch();(right/('g%03d'%i)).touch()
+ ui=UI(left,right,controlling=False)
+ ui.wait('Ready.');ui.send('\x1b[F');ui.wait('601/601 entries')
+ ui.send('r');ui.wait('601/601 entries')
+ ui.send('c');ui.wait('destination filename');ui.send('\r');ui.wait('Copy file?')
+ ui.send('y');ui.wait('File copied.');assert (right/'f599').exists()
+ ui.send('q');ui.finish()
  # Signal-driven cleanup during input.
  ui=UI(left,right);ui.wait('Ready.');ui.p.send_signal(signal.SIGTERM);ui.finish()
-print('PASS: real UI navigation, viewer pagination, cancel/confirm copy and deletion, overwrite refusal, move, mkdir, path errors, help, quit and terminal restoration')
+print('PASS: real UI navigation, viewer pagination, cancel/confirm copy and deletion, overwrite refusal, move, mkdir, path errors, help, quit, terminal restoration, and 600-entry operation without a controlling tty')

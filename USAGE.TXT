@@ -1,9 +1,10 @@
-Cmdr 0.2.0
+Cmdr 0.3.0-dev
 cmdr [left-directory [right-directory]]
 Tab switches panels; arrows select; Enter opens a directory.
 F1/? help, F2/P path, F3/V view, F4/E vi, F5/C copy, F6/M move,
 F7/N mkdir, F8/D delete, F9/! shell, F10/Q quit, R refresh.
 Copy/move refuse overwrites. Delete only files or empty directories.
-80x25 ANSI terminal; 128 entries per panel. No recursive operations.
-Project: https://github.com/l00nix/cmdr
+80x25 ANSI terminal, including Telnet. No recursive operations.
+Panels grow with available memory; INCOMPLETE LIST warns of omitted entries.
+Project: https://github.com/l00nix/ELKS-cmdr
 License: GPL-2.0-or-later; see copying.

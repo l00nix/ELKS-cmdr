@@ -56,3 +56,14 @@ or a physical-keyboard/file-operation test.
 - `ppc-etc.bin`: `4240f82a7b0d7d1c8c87173af6c9a38597d821c25f6e010d3840199318486650`
 - `ppc-panels.bin`: `5d0e9ed53f250d01cc1267713ea447f9ab72c6ceec15158da3fb7bb7a10d5626`
 - `ppc-font.bin`: `ddad441c6fd10808a4e94040609cd5471704eb59d18c5fcf6059c028fa8ccae6`
+
+## Development captures, 21 November 2026
+
+- `ppc-dynamic.png` / `ppc-dynamic.bin`: cmdr 0.3.0-dev on the physical PPC,
+  showing all 206 `/bin` entries without the earlier 128-entry warning.
+- `ppc-fm.png` / `ppc-fm.bin`: upstream `/bin/fm /bin` on the same console.
+
+These use the same `render-ppc.py` and captured BIOS font as the earlier images.
+They preserve actual video-memory characters and attributes; neither is a
+simulated terminal. Console startup settings were restored after each session.
+See [development validation](../TESTING.md) for executable identity and test limits.
