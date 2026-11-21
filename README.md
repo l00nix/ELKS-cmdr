@@ -76,7 +76,7 @@ are not hardware captures. See [validation](docs/TESTING.md) for this release.
 
 ## Origins and license
 
-Developed by Alexander Rau with AI assistance, originally as part of the
+Developed by [@l00nix](https://github.com/l00nix) with AI assistance, originally as part of the
 [HP 200LX ELX suite](https://github.com/l00nix/HP-200LX-elx-suite).
 The standalone source starts from suite commit `a2cc3f3`; historical suite releases
 retain their original names. ELKS provides the operating system, libc and toolchain.
