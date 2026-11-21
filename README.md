@@ -7,6 +7,16 @@ The executable is **`cmdr`** (formerly `elxcmd` / ELX Commander).
 It uses terminal interfaces rather than HP firmware, so it can run on other ELKS
 machines with a suitable console or serial terminal.
 
+## Screenshot
+
+![Commander file manager after copying alpha.txt](docs/images/cmdr.png)
+
+ELX Commander 0.1 on the double-speed HP 200LX after a successful file copy,
+captured with ELXcap on 19 October 2026.
+The original 640×200 pixels are preserved. The displayed names and versions predate
+the standalone rename. [Original BMP](docs/images/cmdr.bmp) ·
+[Capture details](docs/images/README.md).
+
 ## Use
 
 ```sh
