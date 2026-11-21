@@ -72,7 +72,9 @@ Version 0.3.0 fixes full-screen Telnet startup as well as the fixed 128-entry
 listing limit. Both local console and ANSI Telnet are supported; the UI needs
 at least 80 columns and 25 rows. To upgrade just cmdr, run `ept install cmdr`
 again. `ept upgrade` considers all installed packages.
-See [validation details](docs/TESTING.md) for hardware results and limits.
+The 0.2.0-to-0.3.0 EPT upgrade and installed Telnet UI were verified on the
+physical PPC 512, including 206 entries in each panel. See
+[validation details](docs/TESTING.md) for hardware results and limits.
 
 If EPT is not installed yet, follow the repository's
 [EPT bootstrap instructions](http://ept.8088retro.com/).

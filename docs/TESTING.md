@@ -9,8 +9,28 @@ budget is 60,784 bytes before argv/environment.
 Release executable SHA-256:
 `c9c7d25c2bca8acebf4eccbbe8a9a5f0dad44c4b1a987066b6e7db8e5b355496`.
 
-EPT publication and the physical upgrade test are recorded separately below
-once complete. The development-build hardware results and large-directory
+## EPT upgrade on the physical PPC 512
+
+The final release was published in the stable catalogue at
+<http://ept.8088retro.com/> on 21 November 2026. Public HTTP verification passed
+for ten endpoints, including exact bytes, Content-Length and no redirects or
+content compression.
+
+With that repository selected, `ept update` followed by `ept install cmdr`
+upgraded the physical Amstrad PPC 512 running ELKS 0.9.2 from 0.2.0 to 0.3.0.
+
+- EPT exited successfully; all three installed files matched the release hashes
+  and expected modes (755 for the executable, 644 for documentation).
+- `cmdr --version` reported 0.3.0, and EPT registered all three stable-package
+  files at 0.3.0. Other package records and the EPT executable were unchanged.
+- The installed `/bin/cmdr` opened over Telnet with all 206 `/bin` entries in
+  each panel. End, panel switching and refresh retained the final selections.
+- Help and return passed. Normal quit returned status 0; both quit and Ctrl-C
+  restored the original terminal settings.
+- Original EPT configuration and cached catalogues were restored afterward;
+  cmdr 0.3.0 remains installed and registered.
+
+The broader development-build hardware results and unresolved large-directory
 performance limitation follow.
 
 # Development validation: 0.3.0-dev
@@ -68,8 +88,9 @@ The cause of that delay is not isolated. These are **not** claimed as passing
 large-directory hardware tests; 600-entry coverage above is host/emulator only.
 A subsequent small-directory Telnet run and the 206-entry tests passed.
 
-The stable EPT package remains 0.2.0. The tested development binary is staged at
-`/root/cmdnew21/cmdr`; `/bin/cmdr` and the EPT registry are unchanged.
+At the time of this development test, the stable EPT package remained 0.2.0.
+The development binary was staged at `/root/cmdnew21/cmdr` without changing
+`/bin/cmdr` or the EPT registry. The final 0.3.0 upgrade is recorded above.
 
 The same development binary also passed physical-console startup with all 206
 `/bin` entries and SIGTERM cleanup. The original console launcher and inittab
