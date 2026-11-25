@@ -82,7 +82,8 @@ int loadpanel(struct panel *p) {
     if(p->count>1)qsort(p->entries,p->count,sizeof(struct entry),compare);
     if(p->selected>=p->count)p->selected=p->count?p->count-1:0;
     {int i;for(i=0;i<p->count;i++)if(!strcmp(keep,p->entries[i].name)){p->selected=i;break;}}
-    p->top=0;return 0;
+    /* Refresh keeps the viewport; directory changes reset it at the caller. */
+    return 0;
 }
 int validname(const char *s) {
     return *s && strcmp(s,".") && strcmp(s,"..") && !strchr(s,'/') && strlen(s)<NAME_CAP;

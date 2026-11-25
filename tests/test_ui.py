@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """PTY integration tests against the real application (optionally through elksemu)."""
-import os,pty,fcntl,termios,struct,subprocess,select,time,tempfile,sys,signal
+import os,pty,fcntl,termios,struct,subprocess,select,time,tempfile,sys,signal,re
 from pathlib import Path
 command=[str(Path(x).resolve()) for x in sys.argv[1:]]
 class UI:
@@ -40,6 +40,31 @@ class UI:
   finally:
    if self.p.poll() is None:self.p.kill();self.p.wait()
    os.close(self.master);os.close(self.slave)
+def cells(data,rows=25,cols=80):
+ """Replay cmdr's ANSI output so delta redraws can be compared with a repaint."""
+ grid=[[(' ',False) for _ in range(cols)] for _ in range(rows)]
+ row=col=0;rev=False;saved=(0,0)
+ for token in re.findall(rb'\x1b\[[0-9;?]*[A-Za-z]|\x1b[78]|[^\x1b]+',data):
+  if token==b'\x1b7':saved=(row,col)
+  elif token==b'\x1b8':row,col=saved
+  elif token.startswith(b'\x1b['):
+   params=token[2:-1];end=token[-1:]
+   if end==b'H':
+    parts=params.split(b';');row=min(rows-1,int(parts[0] or b'1')-1)
+    col=min(cols-1,int(parts[1] or b'1')-1) if len(parts)>1 else 0
+   elif end==b'J' and params==b'2':grid=[[(' ',False) for _ in range(cols)] for _ in range(rows)]
+   elif end==b'm':
+    for n in params.split(b';'):
+     if n in (b'',b'0'):rev=False
+     elif n==b'7':rev=True
+  else:
+   for ch in token:
+    if ch==13:col=0
+    elif ch==10:row=min(rows-1,row+1)
+    elif ch>=32:
+     grid[row][col]=(chr(ch),rev);col=min(cols-1,col+1)
+ return grid
+
 with tempfile.TemporaryDirectory(prefix='cmdr-ui-') as d:
  base=Path(d);left=base/'left';right=base/'right';left.mkdir();right.mkdir()
  content=('UNIQUE VIEWER TEXT\n'+'line\n'*50).encode();(left/'alpha.txt').write_bytes(content)
@@ -104,4 +129,15 @@ with tempfile.TemporaryDirectory(prefix='cmdr-ui-') as d:
   else:ui.wait('F10/Q Quit')
   assert ('\x1b[%d;1H'%expected).encode() in ui.data
   ui.send('0');ui.finish()
+ # Incremental painting must match an explicit full refresh, including highlights.
+ ui=UI(left,right,probe_reply=b'\x1b[25;80R');ui.wait('F10/Q Quit');ui.wait('\x1b[0m')
+ for keypress in ['\x1b[B','\x1b[B','\t','\x1b[B','\t','\x1b[F','\x1b[A','\x1b[H','\x1b[6~','\x1b[5~']:
+  start=len(ui.data);ui.send(keypress);ui.wait('F10/Q Quit');ui.wait('\x1b[0m')
+  delta=len(ui.data)-start
+  if keypress=='\x1b[B':assert delta<600,delta
+  incremental=cells(ui.data)
+  ui.send('r');ui.wait('F10/Q Quit');ui.wait('\x1b[0m')
+  assert cells(ui.data)==incremental,('delta repaint differs from full refresh',repr(keypress),[(r,c,incremental[r][c],cells(ui.data)[r][c]) for r in range(25) for c in range(80) if incremental[r][c]!=cells(ui.data)[r][c]][:15])
+ ui.send('0');ui.finish()
+print('PASS: incremental rows/highlights match full refresh; within-page navigation under 600 output bytes')
 print('PASS: UI file operations, keyboard sequences and number shortcuts, bare Escape, 120x40 layout, resize/DSR/timeout/typeahead, paste suppression and terminal restoration (shell return on host only)')

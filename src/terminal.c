@@ -41,7 +41,7 @@ int terminal_size(void) {
 }
 int terminal_open(void) {
     if(!isatty(0)||!isatty(1)){errno=ENOTTY;return -1;}
-    if(tty_init(CatchISig)<0)return -1;
+    if(tty_init(CatchISig|FullBuffer)<0)return -1;
     active=1;pasting=0;
     signal(SIGINT,stopped);signal(SIGTERM,stopped);signal(SIGHUP,stopped);signal(SIGQUIT,stopped);
 #ifdef SIGWINCH

@@ -10,6 +10,7 @@
 volatile int stopping;
 static struct panel panels[2];
 static int current;
+static int full_redraw=1;
 static void reload(void) {
     int i;for(i=0;i<2;i++)if(loadpanel(&panels[i])<0)error_message("Read directory");
 }
@@ -26,7 +27,9 @@ static int selectedpath(char *out) {
 static void draw(void) {
     int p,r,i;char b[MAX_COLS+1];struct entry *e;
     int half=screen_cols/2;
-    field(0,0,screen_cols-1," Cmdr " VERSION "                      Two-panel file manager",1);
+    static int old_selected[2],old_top[2],old_current=-1;
+    int switched=current!=old_current;
+    if(full_redraw)field(0,0,screen_cols-1," Cmdr " VERSION "                      Two-panel file manager",1);
     for(p=0;p<2;p++) {
         struct panel *q=&panels[p];
         unsigned len=strlen(q->path);
@@ -34,13 +37,24 @@ static void draw(void) {
         if(names>NAME_CAP-1)names=NAME_CAP-1;
         if(q->selected<q->top)q->top=q->selected;
         if(q->selected>=q->top+PAGE_ROWS)q->top=q->selected-PAGE_ROWS+1;
+        if(full_redraw || switched) {
         snprintf(b,sizeof(b),"%c %s%s",current==p?'>':' ',len>(unsigned)(width-4)?"...":"",q->path+(len>(unsigned)(width-4)?len-(width-7):0));
         field(1,x,width,b,current==p);
+        }
+        if(full_redraw) {
         snprintf(b,sizeof(b)," %-*s %10s",names,"Name","Bytes");
         field(2,x,width,b,0);
         memset(b,'-',width);b[width]=0;field(3,x,width,b,0);
+        }
         for(r=0;r<PAGE_ROWS;r++) {
-            i=q->top+r;b[0]=0;
+            i=q->top+r;
+            /* No screen-sized buffer: cache only selection/viewport positions.
+             * Moving within a page repaints two rows; scrolling one pane does
+             * not format or transmit the other pane's filenames. */
+            if(!full_redraw && q->top==old_top[p] &&
+               !((switched || q->selected!=old_selected[p]) &&
+                 (i==q->selected || i==old_selected[p])))continue;
+            b[0]=0;
             if(i<q->count) {
                 e=&q->entries[i];
                 if(S_ISDIR(e->mode))snprintf(b,sizeof(b)," %-*.*s  <DIR>",names,names,e->name);
@@ -50,14 +64,19 @@ static void draw(void) {
             } else if(!q->count && !r)strcpy(b,q->failed?" [Cannot read directory]":" [Empty directory]");
             field(4+r,x,width,b,current==p && i==q->selected && i<q->count);
         }
+        if(full_redraw || q->selected!=old_selected[p]) {
         snprintf(b,sizeof(b),"%d/%d%s",q->count?q->selected+1:0,q->count,q->limited&LIMIT_MEMORY?" INCOMPLETE LIST (memory)":q->limited?" INCOMPLETE LIST (name/path/stat)":" entries");
         field(screen_rows-4,x,width,b,0);
+        }
+        old_selected[p]=q->selected;old_top[p]=q->top;
     }
+    if(full_redraw) {
     for(r=1;r<=screen_rows-4;r++)field(r,half-1,1,"|",0);
     field(screen_rows-3,0,screen_cols-1,message,0);
     field(screen_rows-2,0,screen_cols-1,"1 Help  2 Path  3 View  4 Edit  5 Copy  6 Move  7 Mkdir  8 Delete  9 Shell",1);
+    }
     field(screen_rows-1,0,screen_cols-1,"0 Quit | Tab panel | Enter open | R refresh | F1-F9 same as 1-9; F10/Q Quit",0);
-    fflush(stdout);
+    fflush(stdout);old_current=current;full_redraw=0;
 }
 static int confirm(const char *action,const char *src,const char *dst) {
     char b[100];int k,i;
@@ -233,14 +252,15 @@ int main(int argc,char **argv) {
         if(k>='1' && k<='9')k=K_F1+k-'1';
         if(k=='0')k=K_F1+9;
         if(k==K_F1+9 || k=='q'||k=='Q'||k<0)break;
+        full_redraw=1;
         switch(k) {
-        case '\t':current=1-current;break;
-        case K_UP:if(p->selected)p->selected--;break;
-        case K_DOWN:if(p->selected+1<p->count)p->selected++;break;
-        case K_HOME:p->selected=0;break;
-        case K_END:p->selected=p->count?p->count-1:0;break;
-        case K_PGUP:p->selected=p->selected>PAGE_ROWS?p->selected-PAGE_ROWS:0;break;
-        case K_PGDN:p->selected+=PAGE_ROWS;if(p->selected>=p->count)p->selected=p->count?p->count-1:0;break;
+        case '\t':full_redraw=0;current=1-current;break;
+        case K_UP:full_redraw=0;if(p->selected)p->selected--;break;
+        case K_DOWN:full_redraw=0;if(p->selected+1<p->count)p->selected++;break;
+        case K_HOME:full_redraw=0;p->selected=0;break;
+        case K_END:full_redraw=0;p->selected=p->count?p->count-1:0;break;
+        case K_PGUP:full_redraw=0;p->selected=p->selected>PAGE_ROWS?p->selected-PAGE_ROWS:0;break;
+        case K_PGDN:full_redraw=0;p->selected+=PAGE_ROWS;if(p->selected>=p->count)p->selected=p->count?p->count-1:0;break;
         case K_LEFT:case 8:case 127:parent();break;
         case K_RIGHT:enter();break;
         case '\r':case '\n':e=selection();if(e && S_ISDIR(e->mode))enter();else view();break;
@@ -256,6 +276,7 @@ int main(int argc,char **argv) {
         case K_RESIZE:case 'r':case 'R':
             if(terminal_size()<0){stopping=1;break;}
             fputs("\033[H\033[2J",stdout);reload();break;
+        default:full_redraw=0;break;
         }
     }
     terminal_close();for(i=0;i<2;i++)freepanel(&panels[i]);return 0;

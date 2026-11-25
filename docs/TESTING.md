@@ -1,3 +1,51 @@
+# Development beta 0.4.0-beta3: redraw performance
+
+The user confirmed the beta2 console function-key fix, then reported slow
+scrolling. Inspection found that every navigation key formatted and repainted
+both complete panes. Beta3 caches only previous selection/viewport positions:
+within-page movement repaints the old/new selected rows and counter; scrolling
+repaints the affected pane; Tab updates active paths and selection highlights.
+The bottom key legend is still emitted at the end of each frame. Full repaints
+remain for directory changes, dialogs, file operations and resizing. No
+screen-sized heap allocation is added. `CatchISig|FullBuffer` enables the TUI
+library's buffered output, and refresh preserves the viewport.
+
+Host, ASan/UBSan and native-emulator tests pass. New tests replay the ANSI output
+and compare incremental text/attributes with an explicit full refresh after
+arrows, Home/End, Page Up/Down and Tab. Within-page output is bounded below 600
+bytes in the regression test. Existing file-operation and terminal-restoration
+coverage remains passing. Native instruction and memory audits pass: 61,440 of
+65,520 near bytes before argv/environment, 32 bytes more than beta2.
+
+Native executable SHA-256:
+`5ac3ad055161ef2317cc33b5301270bc61680ef598bf324861cc5945ad7a75b2`.
+
+## PPC Telnet comparison — 25 November 2026
+
+Same physical PPC, `/bin` and `/lib`, 80x25 UI; timings run from sending a key
+until the frame's final output arrives. This includes network/terminal costs and
+is not a direct measurement of the physical LCD or keyboard path.
+
+| Action | Beta2 average | Beta3 average | Output bytes, before → after |
+| --- | ---: | ---: | ---: |
+| Within-page down arrow (8 samples) | 1.894 s | 0.202 s | 3,005 → 257 |
+| Edge scrolling (5 samples) | 1.902 s | 0.650 s | 3,005 → 1,063 |
+| Page Down (1 sample) | 1.890 s | 0.659 s | 3,005 → 1,063 |
+| Tab (1 sample) | 1.866 s | 0.220 s | 3,005 → 313 |
+
+The complete beta3 PPC Telnet regression also passed: both panels enumerate all
+210 current `/bin` entries; fragmented function keys, number commands, bare
+Escape, 120x40/100x30 sizing, viewing/pagination, copy/move/mkdir/delete,
+overwrite refusal, shell return and paste suppression work. Quit and Ctrl-C
+restore identical terminal settings. FTP read-back verified the executable,
+copied/moved fixture contents and cleanup. The stable executable, beta2 binary
+and EPT installation registry remain byte-identical to their pre-test copies.
+
+The separate performance build is `/root/cmdr0425/cmdr-spd`. Local-console
+responsiveness comparison is pending. The beta2 `cmdr-fix` binary and stable
+0.3.0 installation are preserved. This change does not eliminate filesystem
+scan costs when opening directories or refreshing their contents.
+
 # Development beta 0.4.0-beta2: console function keys
 
 On 25 November 2026, the user tested beta1 on the physical PPC console and
@@ -20,8 +68,9 @@ as Alt-letter input. Beta2 maps these sequences to function keys only when
 Beta2 native executable SHA-256:
 `a96767ac3ab8b75090b2958fea31e59c8fc9b48cc8b258c09573580ee603413c`.
 Near-memory budget remains 61,408/65,520 bytes before arguments/environment.
-Physical retest of the fix is pending. The separately staged test executable
-is `/root/cmdr0425/cmdr-fix`; the beta1 and stable installations are retained.
+The user subsequently confirmed that physical PPC function keys work in beta2.
+The separately staged test executable is `/root/cmdr0425/cmdr-fix`; the beta1 and
+stable installations are retained.
 
 # Development beta 0.4.0-beta1
 

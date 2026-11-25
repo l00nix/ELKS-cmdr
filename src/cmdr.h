@@ -4,7 +4,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <signal.h>
-#define VERSION "0.4.0-beta2"
+#define VERSION "0.4.0-beta3"
 #define PATH_CAP 256
 #define NAME_CAP 64
 #define MAX_COLS 250
