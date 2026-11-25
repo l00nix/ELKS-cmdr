@@ -1,0 +1,12 @@
+{
+  "repository": "https://github.com/ghaerr/elks",
+  "commit": "a450d52405b8451fecd2959b769b08462104b398",
+  "path": "elkscmd/tui",
+  "sha256": {
+    "tty.c": "57b515cb1387b8ad3dddee461c5e3d4be9251b4f4d84cb5b7ee2ca4c52a42605",
+    "unikey.c": "006369d883d1be46e088cc307f0cd984c1fe0e4912244580fe7d6fa929d073c6",
+    "runes.c": "0399d5c77e6567bced428df895ef8b9cb01694ed91c30877cb40e1a7c1787110",
+    "unikey.h": "a2a3d568c007b1dd65e402f6f285581a4829872f584a5d490b586a072a1f6e23",
+    "runes.h": "8d31d4b8ddfd146d709edba52553caded4f8820c34403718c899da90e0b75077"
+  }
+}
