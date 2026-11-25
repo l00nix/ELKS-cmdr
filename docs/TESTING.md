@@ -27,17 +27,39 @@ Native executable SHA-256:
 The audit reports 61,408 bytes of static data + 48 KiB heap + 4 KiB stack before
 arguments/environment, leaving 4,112 bytes in the 65,520-byte data segment.
 
-**Physical PPC and HP beta tests are pending.** The PPC did not respond to FTP
-or Telnet during this run, so no beta was transferred or installed. In particular,
-the exact macOS/QEMU function-key failure reported in the discussion has not
-been reproduced or verified fixed on that setup. The matching escape sequences
-are covered by PTY tests, which do not test macOS key interception or QEMU input.
+## Physical PPC Telnet validation — 25 November 2026
 
-Before promotion, test the beta from a separate directory on the PPC/HP:
-80x25 console startup; direct number and function keys; bare Escape; a larger
-ANSI Telnet session and refresh after resizing; copy/move/view/delete in a small
-temporary fixture; external shell return; exact terminal restoration on quit and
-Ctrl-C. Preserve the stable package and its EPT registration while testing.
+The unchanged beta executable above was staged at `/root/cmdr0425/cmdr` on the
+physical Amstrad PPC 512 running ELKS 0.9.2. FTP read-back matched its SHA-256
+before and after testing. The stable `/bin/cmdr` remains 0.3.0.
+
+- 80x25 startup with no DSR response, all 209 `/bin` entries in both panels,
+  End/Tab/refresh and selection retention: PASS.
+- Fragmented SS3, VT, Linux-console and CSI function-key sequences delivered
+  over Telnet; number-key help/path commands and bare Escape cancellation: PASS.
+- ANSI DSR response expands the UI to 120x40; refresh changes it to 100x30: PASS.
+- Number-key text viewing and pagination, copy cancellation, confirmed copy,
+  overwrite refusal, move, mkdir with a numeric name, enter/parent navigation,
+  delete cancellation and confirmed empty-directory deletion: PASS.
+- Both copied/moved destination contents read back by FTP and matched the
+  original fixture exactly; source and temporary directory removed: PASS.
+- Number-key external shell and return to the sized UI: PASS.
+- Bracketed paste ignored without executing its embedded panel commands: PASS.
+- Normal exit returned zero; both quit and Ctrl-C restored identical `stty`
+  settings: PASS.
+- Stable executable, EPT registry/configuration, inittab and console launcher
+  remained byte-identical to their pre-test copies.
+
+The dimensions and escape sequences were supplied by a scripted Telnet client
+connected to the physical PPC. This tests the actual native executable and
+network terminal path, not physical keyboard events or an interactive terminal
+emulator's key mapping. **Local-console and HP beta tests remain pending.** The
+exact macOS/QEMU function-key failure reported in the discussion has not been
+reproduced or verified fixed on that setup.
+
+Before promotion, check 80x25 local-console startup and physical keys on the
+PPC/HP, plus the reported macOS/QEMU setup. The isolated beta remains available
+at `/root/cmdr0425/cmdr`; its files are not registered as an EPT upgrade.
 
 The stable GitHub/EPT release remains 0.3.0. CP437/Unicode rendering and external
 image viewers are deferred. The earlier large-directory PPC performance limit

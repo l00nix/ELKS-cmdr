@@ -23,8 +23,10 @@ reviewable [patch to the imported sources](integration/elks-tui.patch).
   to 80×25. `R` refreshes the terminal size as well as directory listings.
 - Bracketed paste is ignored, preventing pasted text from executing panel commands.
 
-The stable download and 8088retro EPT package remain **0.3.0**. Physical beta
-validation is pending; see [beta test results](docs/TESTING.md). Image-viewer
+The stable download and 8088retro EPT package remain **0.3.0**. The beta passed
+physical PPC Telnet checks, including 209 entries per panel, size detection,
+file operations and terminal restoration. Local-console/HP checks remain
+pending; see [beta test results](docs/TESTING.md). Image-viewer
 integration and CP437/Unicode borders are deferred; ASCII borders remain in use.
 
 ## Changes in 0.3.0
