@@ -4,10 +4,12 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <signal.h>
-#define VERSION "0.3.0"
+#define VERSION "0.4.0-beta3"
 #define PATH_CAP 256
 #define NAME_CAP 64
-#define PAGE_ROWS 17
+#define MAX_COLS 250
+extern int screen_cols,screen_rows;
+#define PAGE_ROWS (screen_rows-8)
 struct entry { char *name; unsigned long size; mode_t mode; };
 struct panel { char path[PATH_CAP]; struct entry *entries; int capacity,count,selected,top,limited,failed; };
 extern volatile int stopping;
@@ -21,8 +23,9 @@ int copyfile(const char *src,const char *dst,int moving);
 int removeitem(const char *path);
 int validname(const char *name);
 void error_message(const char *action);
-enum { K_UP=256,K_DOWN,K_LEFT,K_RIGHT,K_HOME,K_END,K_PGUP,K_PGDN,K_F1=280 };
+enum { K_UP=256,K_DOWN,K_LEFT,K_RIGHT,K_HOME,K_END,K_PGUP,K_PGDN,K_RESIZE,K_F1=280 };
 int terminal_open(void);
+int terminal_size(void);
 void terminal_close(void);
 int key(void);
 int decodekey(const char *s);

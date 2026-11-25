@@ -1,9 +1,9 @@
 # External build and EPT integration
 
-Integration submissions (pending maintainer acceptance):
+Integration status:
 
-- [ELKS external build PR #2858](https://github.com/ghaerr/elks/pull/2858).
-- [EPT recipe PR #12](https://github.com/sammothxc/ept/pull/12).
+- [ELKS external build PR #2858](https://github.com/ghaerr/elks/pull/2858): merged.
+- [EPT recipe PR #12](https://github.com/sammothxc/ept/pull/12): pending.
 - Recipes are also committed to [l00nix/ept](https://github.com/l00nix/ept/tree/main/recipes).
 
 Published on 21 November 2026: cmdr 0.3.0 is available in the stable catalogue
@@ -51,3 +51,9 @@ A GitHub release alone does not add it to EPT's default server.
 All installed path components are 8.3-compatible: `/bin/cmdr`,
 `/lib/cmdr/copying`, `/lib/cmdr/usage.txt`. Host build filenames are not
 installed on ELKS. No compatibility alias using the old executable name is installed.
+
+The development 0.4.0-beta1 build directly compiles vendored ELKS TUI sources;
+it does not require a new system libc or an installed TUI library. See
+[provenance and local changes](../vendor/elks-tui/README.md). Its recipe also
+installs third-party notices as `/lib/cmdr/tuilic.txt`. The stable EPT package
+remains 0.3.0 until the beta is validated and separately published.

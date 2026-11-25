@@ -1,23 +1,23 @@
-/* SPDX-License-Identifier: GPL-2.0-or-later
- * Uses ELKS's existing ANSI text-console protocol, including ESC 1..0 Fn keys.
- * No BIOS calls, framebuffer access, global key hooks or graphics ownership.
- */
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 #include "cmdr.h"
+#include "unikey.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <termios.h>
 #include <errno.h>
-#include <sys/ioctl.h>
-#include <sys/time.h>
-#include <sys/select.h>
-static struct termios saved;
-static int active,have_saved;
-static void stopped(int sig){(void)sig;stopping=1;}
+static int active, pasting;
+static volatile int resized;
+int screen_cols=80, screen_rows=25;
+static void stopped(int sig){signal(sig,stopped);stopping=1;}
+#ifdef SIGWINCH
+static void window_changed(int sig){signal(sig,window_changed);resized=1;}
+#endif
 void at(int row,int col){printf("\033[%d;%dH",row+1,col+1);}
 void field(int row,int col,int width,const char *s,int reverse) {
-    int i;at(row,col);fputs(reverse?"\033[0;7m":"\033[0m",stdout);
+    int i;if(row<0||row>=screen_rows||col<0||col>=screen_cols)return;
+    if(width>screen_cols-col-1)width=screen_cols-col-1;
+    at(row,col);fputs(reverse?"\033[0;7m":"\033[0m",stdout);
     for(i=0;i<width;i++) {
         unsigned char c=*s?(unsigned char)*s++:' ';
         putchar(c>=32 && c<127?c:'?');
@@ -27,71 +27,65 @@ void field(int row,int col,int width,const char *s,int reverse) {
 void terminal_close(void) {
     if(!active)return;
     fputs("\033[0m\033[?25h\033[H\033[2J",stdout);fflush(stdout);
-    tcsetattr(0,TCSAFLUSH,&saved);active=0;
+    tty_restore();active=0;
 }
-int terminal_open(void) {
-    struct termios t;
-    if(!isatty(0)||!isatty(1)){errno=ENOTTY;return -1;}
-#ifdef TIOCGWINSZ
-    {struct winsize ws;if(ioctl(1,TIOCGWINSZ,&ws)==0 && ws.ws_col && ws.ws_row && (ws.ws_col<80 || ws.ws_row<25)){errno=EINVAL;return -1;}}
-#endif
-    if(!have_saved){if(tcgetattr(0,&saved)<0)return -1;have_saved=1;}
-    /* fm's tty layer operates on inherited terminal descriptors. ELKS
-     * telnetd sessions need not have a controlling /dev/tty. select() lets
-     * us read stdin without setting O_NONBLOCK on a shared stdout handle. */
-    t=saved;t.c_lflag&=~(ECHO|ECHONL|ICANON|IEXTEN);t.c_lflag|=ISIG;
-    t.c_iflag&=~(ICRNL|INLCR|IGNCR|ISTRIP|IXON|IXOFF);
-    t.c_cc[VMIN]=1;t.c_cc[VTIME]=0;
-    if(tcsetattr(0,TCSAFLUSH,&t)<0)return -1;
-    active=1;signal(SIGINT,stopped);signal(SIGTERM,stopped);signal(SIGHUP,stopped);signal(SIGQUIT,stopped);
-    fputs("\033[0m\033[H\033[2J\033[?25l",stdout);return 0;
-}
-int decodekey(const char *s) {
-    int n=(int)strlen(s),v;static const int vt[]={11,12,13,14,15,17,18,19,20,21};
-    if(n==1)return (unsigned char)*s;
-    if(s[0]!=27)return 0;
-    if(n==2) {
-        if(s[1]>='1' && s[1]<='9')return K_F1+s[1]-'1';
-        if(s[1]=='0')return K_F1+9;
-    }
-    if(n==3 && (s[1]=='[' || s[1]=='O')) {
-        switch(s[2]){case 'A':return K_UP;case 'B':return K_DOWN;case 'C':return K_RIGHT;case 'D':return K_LEFT;case 'H':return K_HOME;case 'F':return K_END;}
-        if(s[1]=='O' && s[2]>='P' && s[2]<='S')return K_F1+s[2]-'P';
-    }
-    if(n==4 && s[1]=='[' && s[2]=='[' && s[3]>='A' && s[3]<='E')return K_F1+s[3]-'A';
-    if(n>3 && s[1]=='[' && s[n-1]=='~') {
-        v=atoi(s+2);
-        if(v==1||v==7)return K_HOME;if(v==4||v==8)return K_END;
-        if(v==5)return K_PGUP;if(v==6)return K_PGDN;
-        for(n=0;n<10;n++)if(v==vt[n])return K_F1+n;
+int terminal_size(void) {
+    int cols=screen_cols,rows=screen_rows;
+    resized=0;
+    if(tty_getsize(&cols,&rows)>0) {
+        if(cols<80||rows<25){errno=EINVAL;return -1;}
+        screen_cols=cols>MAX_COLS?MAX_COLS:cols;
+        screen_rows=rows>100?100:rows;
     }
     return 0;
 }
+int terminal_open(void) {
+    if(!isatty(0)||!isatty(1)){errno=ENOTTY;return -1;}
+    if(tty_init(CatchISig|FullBuffer)<0)return -1;
+    active=1;pasting=0;
+    signal(SIGINT,stopped);signal(SIGTERM,stopped);signal(SIGHUP,stopped);signal(SIGQUIT,stopped);
+#ifdef SIGWINCH
+    signal(SIGWINCH,window_changed);
+#endif
+    if(terminal_size()<0){terminal_close();return -1;}
+    fputs("\033[0m\033[H\033[2J\033[?25l",stdout);return 0;
+}
+int decodekey(const char *s) {
+    unsigned k=(unsigned)ansi_to_unikey((char *)s,(int)strlen(s));
+    /* Unicode private-use keys may be negative in a 16-bit int. */
+    if(k==(unsigned)kUpArrow)return K_UP;
+    if(k==(unsigned)kDownArrow)return K_DOWN;
+    if(k==(unsigned)kLeftArrow)return K_LEFT;
+    if(k==(unsigned)kRightArrow)return K_RIGHT;
+    if(k==(unsigned)kHome)return K_HOME;
+    if(k==(unsigned)kEnd)return K_END;
+    if(k==(unsigned)kPageUp)return K_PGUP;
+    if(k==(unsigned)kPageDown)return K_PGDN;
+    if(k>=(unsigned)kF1 && k<=(unsigned)kF10)return K_F1+(k-(unsigned)kF1);
+    return k<128?(int)k:0;
+}
 int key(void) {
-    char s[24];int n=0,ready;ssize_t r;fd_set readers;struct timeval timeout;unsigned char c;
+    char s[64];int n,x,y;
     fflush(stdout);
     while(!stopping) {
-        FD_ZERO(&readers);FD_SET(0,&readers);
-        timeout.tv_sec=0;timeout.tv_usec=200000L;
-        ready=select(1,&readers,NULL,NULL,&timeout);
-        if(ready<0){if(errno==EINTR)continue;stopping=1;return -1;}
-        if(!ready){if(n)return n==1?27:0;continue;}
-        r=read(0,&c,1);
-        if(r<0 && (errno==EINTR || errno==EAGAIN))continue;
-        if(r<=0){stopping=1;return -1;}
-        if(!n && c!=27)return c;
-        s[n++]=(char)c;s[n]=0;
-        if(n==2 && c!='[' && c!='O')return decodekey(s);
-        if(n>=3 && c>=0x40 && c<=0x7e && !(n==3 && c=='['))return decodekey(s);
-        if(n>=22)return 0;
+        if(resized){resized=0;return K_RESIZE;}
+        n=readansi(0,s,sizeof(s));
+        if(n<0){if(errno==EINTR)continue;stopping=1;return -1;}
+        if(!n)continue;
+        if(!strcmp(s,"\033[200~")){pasting=1;continue;}
+        if(!strcmp(s,"\033[201~")){pasting=0;continue;}
+        if(pasting)continue;
+        /* A late probe response is not a command or filename input. */
+        if(ansi_dsr(s,n,&x,&y)>0)continue;
+        return decodekey(s);
     }
     return -1;
 }
 int prompt(const char *label,char *buf,int cap) {
     int k,n=(int)strlen(buf);
-    field(22,0,79,label,1);field(24,0,79,"Enter accepts | Esc cancels | Backspace edits",0);
+    field(screen_rows-3,0,screen_cols-1,label,1);field(screen_rows-1,0,screen_cols-1,"Enter accepts | Esc cancels | Backspace edits",0);
     while(!stopping) {
-        field(23,0,79,buf+n-(n>77?77:n),0);at(23,n>77?77:n);fputs("\033[?25h",stdout);
+        field(screen_rows-2,0,screen_cols-1,buf+n-(n>screen_cols-3?screen_cols-3:n),0);at(screen_rows-2,n>screen_cols-3?screen_cols-3:n);fputs("\033[?25h",stdout);
         k=key();
         if(k==27||k<0){fputs("\033[?25l",stdout);return 0;}
         if(k=='\r'||k=='\n'){fputs("\033[?25l",stdout);return 1;}

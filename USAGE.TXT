@@ -1,10 +1,12 @@
-Cmdr 0.3.0
+Cmdr 0.4.0-beta3
 cmdr [left-directory [right-directory]]
 Tab switches panels; arrows select; Enter opens a directory.
-F1/? help, F2/P path, F3/V view, F4/E vi, F5/C copy, F6/M move,
-F7/N mkdir, F8/D delete, F9/! shell, F10/Q quit, R refresh.
+1 help, 2 path, 3 view, 4 vi, 5 copy, 6 move, 7 mkdir, 8 delete,
+9 shell, 0 quit. F1-F9 match 1-9; F10 quits. Letter shortcuts remain.
+R refreshes listings and terminal size. Bare Esc cancels a prompt.
 Copy/move refuse overwrites. Delete only files or empty directories.
-80x25 ANSI terminal, including Telnet. No recursive operations.
+ANSI terminal, including Telnet; 80x25 minimum, up to 250x100.
+Size detection uses ioctl or ANSI DSR; 80x25 fallback. No recursive operations.
 Panels grow with available memory; INCOMPLETE LIST warns of omitted entries.
 Project: https://github.com/l00nix/ELKS-cmdr
-License: GPL-2.0-or-later; see copying.
+License: GPL-2.0-or-later; see copying and TUI notices in tuilic.txt.
