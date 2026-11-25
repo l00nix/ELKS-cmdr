@@ -7,5 +7,5 @@ def forward(sig,frame):
  if p.poll() is None:p.send_signal(sig)
 for sig in (signal.SIGTERM,signal.SIGINT,signal.SIGHUP):signal.signal(sig,forward)
 rc=p.wait()
-assert termios.tcgetattr(0)==saved,'child did not restore its terminal settings'
+assert termios.tcgetattr(0)==saved,('child did not restore its terminal settings',saved,termios.tcgetattr(0))
 sys.exit(rc)

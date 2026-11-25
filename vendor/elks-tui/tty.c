@@ -10,6 +10,7 @@
 
 static struct termios oldterm;
 static struct termios t;
+static int active;
 int _tty_flags;
 int iselksconsole;
 
@@ -24,16 +25,20 @@ int iselksconsole;
 
 static void onkilled(int sig)
 {
+    (void)sig;
     exit(1);                /* calls tty_restore in exit handler */
 }
 
 void tty_restore(void)
 {
+    if (!active) return;
+    active = 0;
+    WRITE(1, "\033[?2004l");
     WRITE(1, DISABLE_MOUSE_TRACKING);
     WRITE(1, RESET_VIDEO);
     if (_tty_flags & ExitLastLine)
         WRITE(1, GOTO_LASTLINE);
-    tcsetattr(1, TCSADRAIN, &oldterm);
+    tcsetattr(0, TCSAFLUSH, &oldterm);
 }
 
 void tty_enable_unikey(void)
@@ -47,14 +52,17 @@ void tty_enable_unikey(void)
     }
     t.c_iflag &= ~(INPCK | ISTRIP | PARMRK | INLCR | IGNCR | ICRNL | IXON |
                    IGNBRK | BRKINT);
+#ifdef IUTF8
     if (_tty_flags & Utf8)
         t.c_iflag |= IUTF8;         /* correct kernel backspace behaviour */
+#endif
     t.c_lflag &= ~(IEXTEN | ICANON | ECHO | ECHONL | ISIG);
     if (_tty_flags & CatchISig)
         t.c_lflag |= ISIG;
     t.c_cflag &= ~(CSIZE | PARENB);
     t.c_cflag |= CS8;
-    tcsetattr(1, TCSADRAIN, &t);
+    if (tcsetattr(0, TCSADRAIN, &t) < 0) return;
+    active = 1;
     WRITE(1, ENABLE_SAFE_PASTE);
     if (_tty_flags & FullMouseTracking) {
         WRITE(1, ENABLE_ALL_MOUSE_TRACKING);
@@ -93,6 +101,7 @@ int tty_iselksconsole(int fd)
     if (!p) return 0;
     return !strncmp(p, "/dev/tty", 8) && p[8] >= '1' && p[8] <= '3';
 #else
+    (void)fd;
     return 0;
 #endif
 }
@@ -103,7 +112,7 @@ int tty_init(enum ttyflags f)
 
     _tty_flags = f;
     if (!once) {
-        if (tcgetattr(1, &oldterm) != -1) {
+        if (tcgetattr(0, &oldterm) != -1) {
             atexit(tty_restore);
             signal(SIGTERM, onkilled);
             signal(SIGINT, onkilled);
@@ -112,9 +121,10 @@ int tty_init(enum ttyflags f)
         }
         once = 1;
         memcpy(&t, &oldterm, sizeof(t));
-        iselksconsole = tty_iselksconsole(1);
+        iselksconsole = tty_iselksconsole(0);
     }
     tty_enable_unikey();
+    if (!active) return -1;
     if (_tty_flags & FullBuffer)
         tty_fullbuffer();
     return 0;

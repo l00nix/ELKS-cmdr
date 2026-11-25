@@ -24,41 +24,45 @@ static int selectedpath(char *out) {
     return 1;
 }
 static void draw(void) {
-    int p,r,i;char b[100];struct entry *e;
-    field(0,0,79," Cmdr " VERSION "                      Two-panel file manager",1);
+    int p,r,i;char b[MAX_COLS+1];struct entry *e;
+    int half=screen_cols/2;
+    field(0,0,screen_cols-1," Cmdr " VERSION "                      Two-panel file manager",1);
     for(p=0;p<2;p++) {
         struct panel *q=&panels[p];
         unsigned len=strlen(q->path);
+        int x=p*half,width=(p?screen_cols-half:half)-1,names=width-13;
+        if(names>NAME_CAP-1)names=NAME_CAP-1;
         if(q->selected<q->top)q->top=q->selected;
         if(q->selected>=q->top+PAGE_ROWS)q->top=q->selected-PAGE_ROWS+1;
-        snprintf(b,sizeof(b),"%c %s%s",current==p?'>':' ',len>35?"...":"",q->path+(len>35?len-32:0));
-        field(1,p*40,39,b,current==p);
-        field(2,p*40,39," Name                            Bytes",0);
-        field(3,p*40,39,"---------------------------------------",0);
+        snprintf(b,sizeof(b),"%c %s%s",current==p?'>':' ',len>(unsigned)(width-4)?"...":"",q->path+(len>(unsigned)(width-4)?len-(width-7):0));
+        field(1,x,width,b,current==p);
+        snprintf(b,sizeof(b)," %-*s %10s",names,"Name","Bytes");
+        field(2,x,width,b,0);
+        memset(b,'-',width);b[width]=0;field(3,x,width,b,0);
         for(r=0;r<PAGE_ROWS;r++) {
             i=q->top+r;b[0]=0;
             if(i<q->count) {
                 e=&q->entries[i];
-                if(S_ISDIR(e->mode))snprintf(b,sizeof(b)," %-26.26s  <DIR>",e->name);
-                else if(S_ISLNK(e->mode))snprintf(b,sizeof(b)," %-26.26s  <LINK>",e->name);
-                else if(!S_ISREG(e->mode))snprintf(b,sizeof(b)," %-26.26s  <DEV>",e->name);
-                else snprintf(b,sizeof(b)," %-26.26s %10lu",e->name,e->size);
+                if(S_ISDIR(e->mode))snprintf(b,sizeof(b)," %-*.*s  <DIR>",names,names,e->name);
+                else if(S_ISLNK(e->mode))snprintf(b,sizeof(b)," %-*.*s  <LINK>",names,names,e->name);
+                else if(!S_ISREG(e->mode))snprintf(b,sizeof(b)," %-*.*s  <DEV>",names,names,e->name);
+                else snprintf(b,sizeof(b)," %-*.*s %10lu",names,names,e->name,e->size);
             } else if(!q->count && !r)strcpy(b,q->failed?" [Cannot read directory]":" [Empty directory]");
-            field(4+r,p*40,39,b,current==p && i==q->selected && i<q->count);
+            field(4+r,x,width,b,current==p && i==q->selected && i<q->count);
         }
         snprintf(b,sizeof(b),"%d/%d%s",q->count?q->selected+1:0,q->count,q->limited&LIMIT_MEMORY?" INCOMPLETE LIST (memory)":q->limited?" INCOMPLETE LIST (name/path/stat)":" entries");
-        field(21,p*40,39,b,0);
+        field(screen_rows-4,x,width,b,0);
     }
-    for(r=1;r<=21;r++)field(r,39,1,"|",0);
-    field(22,0,79,message,0);
-    field(23,0,79,"1 Help  2 Path  3 View  4 Edit  5 Copy  6 Move  7 Mkdir  8 Delete  9 Shell",1);
-    field(24,0,79,"F10/Q Quit | Tab panel | Enter open | R refresh | Letter keys: ? p v e c m n d !",0);
+    for(r=1;r<=screen_rows-4;r++)field(r,half-1,1,"|",0);
+    field(screen_rows-3,0,screen_cols-1,message,0);
+    field(screen_rows-2,0,screen_cols-1,"1 Help  2 Path  3 View  4 Edit  5 Copy  6 Move  7 Mkdir  8 Delete  9 Shell",1);
+    field(screen_rows-1,0,screen_cols-1,"0 Quit | Tab panel | Enter open | R refresh | F1-F9 same as 1-9; F10/Q Quit",0);
     fflush(stdout);
 }
 static int confirm(const char *action,const char *src,const char *dst) {
     char b[100];int k,i;
     fputs("\033[H\033[2J",stdout);
-    snprintf(b,sizeof(b),"%s?",action);field(1,0,79,b,1);
+    snprintf(b,sizeof(b),"%s?",action);field(1,0,screen_cols-1,b,1);
     field(3,0,79,"Source:",0);
     for(i=0;i<4;i++) {
         unsigned off=(unsigned)i*79;
@@ -72,7 +76,7 @@ static int confirm(const char *action,const char *src,const char *dst) {
         }
     }
     field(20,0,79,"Press Y to confirm; any other key cancels.",1);
-    field(22,0,79,"Existing destinations are never overwritten.",0);
+    field(screen_rows-3,0,screen_cols-1,"Existing destinations are never overwritten.",0);
     k=key();return !stopping && (k=='y'||k=='Y');
 }
 static void enter(void) {
@@ -108,7 +112,7 @@ static void transfer(int moving) {
     if(!validname(name)){strcpy(message,"Use a filename, without '/' (not '.' or '..').");return;}
     if(joinpath(dst,panels[1-current].path,name)<0){error_message("Destination");return;}
     if(!confirm(moving?"Move file (copy, then remove source)":"Copy file",src,dst))return;
-    field(22,0,79,"Copying... Ctrl-C cancels and exits.",0);fflush(stdout);
+    field(screen_rows-3,0,screen_cols-1,"Copying... Ctrl-C cancels and exits.",0);fflush(stdout);
     message[0]=0;
     if(copyfile(src,dst,moving)<0) {
         if(!message[0])error_message(moving?"Move failed; check both panels":"Copy failed");
@@ -138,25 +142,25 @@ static FILE *open_regular(const char *path) {
     {FILE *f=fdopen(fd,"r");if(!f)close(fd);return f;}
 }
 static void view(void) {
-    char path[PATH_CAP],line[80];FILE *f;int r,col,c=0,k,eof=0;unsigned page=1;
+    char path[PATH_CAP],line[MAX_COLS+1];FILE *f;int r,col,c=0,k,eof=0;unsigned page=1;
     if(!selectedpath(path))return;
     f=open_regular(path);if(!f){error_message("View regular file");return;}
     while(!stopping) {
-        field(0,0,79," Cmdr - text viewer (control/non-ASCII bytes shown as '.')",1);
-        field(1,0,79,path,0);
-        for(r=2;r<=22;r++) {
+        field(0,0,screen_cols-1," Cmdr - text viewer (control/non-ASCII bytes shown as '.')",1);
+        field(1,0,screen_cols-1,path,0);
+        for(r=2;r<=screen_rows-3;r++) {
             col=0;
-            while(col<79 && (c=fgetc(f))!=EOF) {
+            while(col<screen_cols-1 && (c=fgetc(f))!=EOF) {
                 if(c=='\r')continue;
                 if(c=='\n')break;
-                if(c=='\t'){do{line[col++]=' ';}while(col<79 && col%8);}
+                if(c=='\t'){do{line[col++]=' ';}while(col<screen_cols-1 && col%8);}
                 else line[col++]=(c>=32 && c<127)?c:'.';
             }
-            line[col]=0;field(r,0,79,line,0);
+            line[col]=0;field(r,0,screen_cols-1,line,0);
             if(c==EOF)eof=1;
         }
-        snprintf(line,sizeof(line),"Page %u%s",page,eof?" - end":"");field(23,0,79,line,0);
-        field(24,0,79,"Space/Enter/PgDn next | Home first page | Q/Esc back",1);
+        snprintf(line,sizeof(line),"Page %u%s",page,eof?" - end":"");field(screen_rows-2,0,screen_cols-1,line,0);
+        field(screen_rows-1,0,screen_cols-1,"Space/Enter/PgDn next | Home first page | Q/Esc back",1);
         k=key();if(k<0||k==27||k=='q'||k=='Q')break;
         if(k==K_HOME){rewind(f);page=1;eof=0;}
         else if((k==' '||k=='\r'||k=='\n'||k==K_PGDN)&&!eof)page++;
@@ -192,12 +196,13 @@ static void help_screen(void) {
         " Cmdr " VERSION " - keyboard guide",
         "Tab: change active panel. Arrows: select. Enter: open folder or view file.",
         "Left/Backspace: parent. Home/End/PgUp/PgDn: navigate the list.",
-        "F1 / ?   Help                 F6 / M   Move to the other panel",
-        "F2 / P   Change panel path    F7 / N   Create folder in active panel",
-        "F3 / V   View file            F8 / D   Delete file or EMPTY folder",
-        "F4 / E   Edit with vi         F9 / !   Shell in active directory",
-        "F5 / C   Copy to other panel  F10 / Q  Quit",
-        "R: reload both panels. Dotfiles are included. F-key fallback: Esc then 1..0.",
+        "1 Help                       6 Move to the other panel",
+        "2 Change panel path          7 Create folder in active panel",
+        "3 View file                  8 Delete file or EMPTY folder",
+        "4 Edit with vi               9 Shell in active directory",
+        "5 Copy to other panel        0 Quit",
+        "F1-F9 do the same as 1-9; F10 quits. R refreshes listings and terminal size.",
+        "Letter shortcuts: ? P V E C M N D ! Q. Dotfiles are included.",
         "Copy/move prompt for a filename; source and destination are then confirmed.",
         "Existing targets are refused. For a rename, point both panels at one folder.",
         "Move copies then removes the source. On failure, check both panels.",
@@ -214,7 +219,7 @@ static void help_screen(void) {
 int main(int argc,char **argv) {
     int k,i;struct panel *p;struct entry *e;
     if(argc>1 && (!strcmp(argv[1],"--help")||!strcmp(argv[1],"--version"))) {
-        puts("Cmdr " VERSION "\nUsage: cmdr [LEFT_DIRECTORY [RIGHT_DIRECTORY]]\nTwo-panel 80x25 ANSI file manager. F1/? for help; F10/Q exits.\nCopy/move regular files without overwrite; deletion requires confirmation.");return 0;
+        puts("Cmdr " VERSION "\nUsage: cmdr [LEFT_DIRECTORY [RIGHT_DIRECTORY]]\nTwo-panel ANSI file manager (80x25 minimum). 1 for help; 0 quits.\nCopy/move regular files without overwrite; deletion requires confirmation.");return 0;
     }
     if(argc>3 || (argc>1 && argv[1][0]=='-')){fputs("Usage: cmdr [LEFT_DIRECTORY [RIGHT_DIRECTORY]]\n",stderr);return 2;}
     for(i=0;i<2;i++) {
@@ -222,9 +227,11 @@ int main(int argc,char **argv) {
         if(canonical(panels[i].path,path)<0){perror(path);return 1;}
     }
     if(terminal_open()<0){perror("Cmdr: needs an 80x25 text terminal");return 1;}
-    atexit(terminal_close);reload();strcpy(message,"Ready. Copy/move target is the other panel; F1/? shows help.");
+    atexit(terminal_close);reload();strcpy(message,"Ready. Copy/move target is the other panel; 1 shows help.");
     while(!stopping) {
         draw();k=key();p=&panels[current];
+        if(k>='1' && k<='9')k=K_F1+k-'1';
+        if(k=='0')k=K_F1+9;
         if(k==K_F1+9 || k=='q'||k=='Q'||k<0)break;
         switch(k) {
         case '\t':current=1-current;break;
@@ -246,7 +253,9 @@ int main(int argc,char **argv) {
         case K_F1+6:case 'n':case 'N':make_directory();break;
         case K_F1+7:case 'd':case 'D':delete_selected();break;
         case K_F1+8:case '!':external(0);break;
-        case 'r':case 'R':reload();break;
+        case K_RESIZE:case 'r':case 'R':
+            if(terminal_size()<0){stopping=1;break;}
+            fputs("\033[H\033[2J",stdout);reload();break;
         }
     }
     terminal_close();for(i=0;i<2;i++)freepanel(&panels[i]);return 0;

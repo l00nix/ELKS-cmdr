@@ -10,6 +10,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <sys/time.h>
+#include <sys/select.h>
+#include <sys/ioctl.h>
 #include "unikey.h"
 
 #define ANSI_UTF8       0       /* =1 to decode UTF-9 in readansi() */
@@ -131,7 +133,7 @@ char *unikeyname(int k)
     static char name[24];
 
     for (i = 0; unikeynames[i].key; i++) {
-        if (unikeynames[i].key == k) {
+        if ((unsigned)unikeynames[i].key == (unsigned)k) {
             strcpy(name, unikeynames[i].name);
             return name;
         }
@@ -146,8 +148,11 @@ static int small_atoi(const char *s)
 
     while (*s == ' ' || *s == '\t')
         s++;
-    while ((unsigned) (*s - '0') <= 9u)
+    while ((unsigned) (*s - '0') <= 9u) {
+        /* Bound terminal parameters before multiplying on a 16-bit target. */
+        if (n > 3276 || (n == 3276 && *s > '7')) return 32767;
         n = n * 10 + *s++ - '0';
+    }
     return n;
 }
 
@@ -167,6 +172,22 @@ int ansi_to_unikey(char *buf, int n)
         return (c == 127)? 8: c;    /* map DEL -> BS */
     }
     if (buf[0] == ESC) {
+        if (n == 3 && (buf[1] == 'O' || buf[1] == '[')) {
+            switch (buf[2]) {
+            case 'P': return kF1;
+            case 'Q': return kF2;
+            case 'R': return kF3;
+            case 'S': return kF4;
+            case 'A': return kUpArrow;
+            case 'B': return kDownArrow;
+            case 'C': return kRightArrow;
+            case 'D': return kLeftArrow;
+            case 'H': return kHome;
+            case 'F': return kEnd;
+            }
+        }
+        if (n == 4 && buf[1] == '[' && buf[2] == '[' &&
+            buf[3] >= 'A' && buf[3] <= 'E') return kF1 + buf[3] - 'A';
         if (buf[1] == '[') {
             if (n == 3) {                           /* xterm sequences */
                 switch (buf[2]) {                   /* ESC [ A etc */
@@ -317,29 +338,39 @@ int stream_to_rune(unsigned int ch)
  * @see ECMA-48
  */
 
+/* One non-DSR event preserved by tty_getsize for its caller. */
+static char pending[64];
+static int pending_len;
+
 int readansi(int fd, char *buf, int size) {
   unsigned char c;
   int rc, i, j;
   enum { kAscii, kUtf8, kEsc, kCsi, kSs } t;
   if (size) buf[0] = 0;
+  if (fd == 0 && pending_len) {
+    if (pending_len >= size) { errno = ENOMEM; return -1; }
+    memcpy(buf, pending, pending_len + 1);
+    rc = pending_len; pending_len = 0;
+    return rc;
+  }
   for (j = i = 0, t = kAscii;;) {
     if (i + 2 >= size) {
       errno = ENOMEM;
       return -1;
     }
+    {
+      fd_set fds;
+      struct timeval timeout;
+      FD_ZERO(&fds); FD_SET(fd, &fds);
+      timeout.tv_sec = 0;
+      timeout.tv_usec = (_tty_flags & NoWait)? 0: 200000L;
+      rc = select(fd + 1, &fds, NULL, NULL, &timeout);
+      if (rc < 0) return -1; /* caller owns signal handling */
+      if (!rc) return i;     /* bare ESC or incomplete sequence */
+    }
     if ((rc = read(fd, &c, 1)) != 1) {
-      if (rc == -1 && errno == EINTR && i) {
-        continue;
-      }
-      if (rc == -1 && errno == EAGAIN) {    /* Linux may return EAGAIN on fn key seq */
-#if !ELKS
-        struct pollfd pfd[1];
-        pfd[0].fd = fd;
-        pfd[0].events = POLLIN;
-        poll(pfd, 1, 0);
-#endif
-        continue;
-      }
+      if (rc == -1 && errno == EAGAIN) continue;
+      if (rc == 0) { errno = EIO; return -1; }
       return rc;
     }
     buf[i++] = c;
@@ -391,6 +422,7 @@ int readansi(int fd, char *buf, int size) {
         }
         break;
       case kCsi:
+        if (i == 3 && c == '[') break; /* Linux console F1..F5 */
         switch (c) {
           case ':':
           case ';':
@@ -523,7 +555,7 @@ static int mouse_to_unikey(int e, int *modkeys)
   return k;
 }
 
-int isdigit(int c)
+static int ascii_isdigit(int c)
 {
     return (unsigned) (c - '0') < 10u;
 }
@@ -545,7 +577,7 @@ int ansi_to_unimouse(char *buf, int n, int *x, int *y, int *modkeys, int *status
     if (!startswith(buf, "\033[<") || (buf[n-1] != 'm' && buf[n-1] != 'M'))
         return -1;
     p = buf + 3;
-    if (!isdigit(*p)) return -1;
+    if (!ascii_isdigit(*p)) return -1;
 
     *status = getparm(p, 0);
     *x = getparm(p, 1) - 1;
@@ -561,10 +593,10 @@ int ansi_to_unimouse(char *buf, int n, int *x, int *y, int *modkeys, int *status
     *status |= (buf[n-1] == 'm') << 7;
     k = mouse_to_unikey(*status, modkeys);
 
-    if (k == kMouseLeftDown || k == kMouseLeftUp) {
+    if ((unsigned)k == (unsigned)kMouseLeftDown || (unsigned)k == (unsigned)kMouseLeftUp) {
         gettimeofday(&t, NULL);
         tick = t.tv_sec * 1000 + t.tv_usec / 1000;
-        if (k == kMouseLeftDown && lastkey == kMouseLeftUp
+        if ((unsigned)k == (unsigned)kMouseLeftDown && (unsigned)lastkey == (unsigned)kMouseLeftUp
             && (tick - lasttick) < kDoubleClickTime) {
             k = kMouseLeftDoubleClick;
         }
@@ -589,6 +621,12 @@ int ansi_dsr(char *buf, int n, int *cols, int *rows)
     if (n < 6 || !startswith(buf, "\033[") || buf[n-1] != 'R')
         return -1;
     p = buf + 2;
+    if (!ascii_isdigit(*p)) return -1;
+    while (ascii_isdigit(*p)) p++;
+    if (*p++ != ';' || !ascii_isdigit(*p)) return -1;
+    while (ascii_isdigit(*p)) p++;
+    if (p != buf + n - 1) return -1;
+    p = buf + 2;
     r = getparm(p, 0);
     c = getparm(p, 1);
     //printf("DSR terminal size is %dx%d\r\n", r, c);
@@ -606,8 +644,17 @@ int ansi_dsr(char *buf, int n, int *cols, int *rows)
 int tty_getsize(int *cols, int *rows)
 {
     int n, x, y;
-    char buf[32];
-
+    char buf[64];
+#ifdef TIOCGWINSZ
+    struct winsize ws;
+    if (ioctl(0, TIOCGWINSZ, &ws) == 0 && ws.ws_col && ws.ws_row) {
+        *cols = ws.ws_col; *rows = ws.ws_row;
+        return 1;
+    }
+#endif
+    /* Do not consume an earlier saved event by probing again. */
+    if (pending_len) return -1;
+    fflush(stdout);
     WRITE(1, PROBE_DISPLAY_SIZE);
     if ((n = readansi(0, buf, sizeof(buf))) > 0) {
         if (ansi_dsr(buf, n, &x, &y) > 0) {
@@ -615,6 +662,8 @@ int tty_getsize(int *cols, int *rows)
             *rows = y;
             return 1;
         }
+        memcpy(pending, buf, n + 1);
+        pending_len = n;
     }
     return -1;
 }

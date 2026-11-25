@@ -4,4 +4,5 @@ GIT=https://github.com/l00nix/ELKS-cmdr.git
 BUILD='ELKS="$ELKS" sh build.sh'
 FILES="build/cmdr:/bin/cmdr
 COPYING:/lib/cmdr/copying
-USAGE.TXT:/lib/cmdr/usage.txt"
+USAGE.TXT:/lib/cmdr/usage.txt
+THIRD-PARTY.txt:/lib/cmdr/tuilic.txt"

@@ -1,3 +1,48 @@
+# Development beta 0.4.0-beta1
+
+The beta directly compiles the ELKS TUI import from upstream
+`a450d52405b8451fecd2959b769b08462104b398`. The native toolchain remains IA16 GCC
+6.3.0 with the previously validated ELKS/libc build at
+`df2a61c5d72415ff4825aab33be427de9306c230`; no libc upgrade is required.
+
+- Host file-operation, allocation-failure and PTY UI tests: PASS.
+- AddressSanitizer/UndefinedBehaviorSanitizer versions of the host tests: PASS.
+- Native 8086 build, instruction audit and near-memory audit: PASS.
+- Native file-operation and PTY UI tests under isolated elksemu: PASS.
+- Both-panel 600-file coverage and operations beyond entry 128: PASS.
+- SS3, VT, CSI and Linux-console function-key sequences delivered in separate
+  writes with 25 ms gaps; bare Escape cancellation: PASS.
+- Number commands, literal digits in filename prompts, bracketed-paste
+  suppression, exit and terminal restoration: PASS.
+- 120x40 layout, resize/refresh to 100x30, ANSI DSR size detection, no-response
+  fallback and preservation of a typed key during probing: PASS.
+- Oversized and malformed DSR parameters fall back safely: PASS.
+- External shell and reinitialization: host PASS; this emulator fixture does
+  not contain an ELKS `/bin/sh`, so it does not cover native shell return.
+- Original imported-file hashes and applying the saved upstream diff back onto
+  the pristine import: PASS. Installed names remain 8.3-compatible.
+
+Native executable SHA-256:
+`eec61d2f3e9bc32bfabc9dbf3aa56d9044ec14347786790dc59eae0c269e556d`.
+The audit reports 61,408 bytes of static data + 48 KiB heap + 4 KiB stack before
+arguments/environment, leaving 4,112 bytes in the 65,520-byte data segment.
+
+**Physical PPC and HP beta tests are pending.** The PPC did not respond to FTP
+or Telnet during this run, so no beta was transferred or installed. In particular,
+the exact macOS/QEMU function-key failure reported in the discussion has not
+been reproduced or verified fixed on that setup. The matching escape sequences
+are covered by PTY tests, which do not test macOS key interception or QEMU input.
+
+Before promotion, test the beta from a separate directory on the PPC/HP:
+80x25 console startup; direct number and function keys; bare Escape; a larger
+ANSI Telnet session and refresh after resizing; copy/move/view/delete in a small
+temporary fixture; external shell return; exact terminal restoration on quit and
+Ctrl-C. Preserve the stable package and its EPT registration while testing.
+
+The stable GitHub/EPT release remains 0.3.0. CP437/Unicode rendering and external
+image viewers are deferred. The earlier large-directory PPC performance limit
+below has not been resolved by this terminal integration.
+
 # Release 0.3.0
 
 Rebuilt from the merged changes with the final 0.3.0 version string on
