@@ -1,4 +1,4 @@
-Cmdr 0.4.0-beta1
+Cmdr 0.4.0-beta2
 cmdr [left-directory [right-directory]]
 Tab switches panels; arrows select; Enter opens a directory.
 1 help, 2 path, 3 view, 4 vi, 5 copy, 6 move, 7 mkdir, 8 delete,

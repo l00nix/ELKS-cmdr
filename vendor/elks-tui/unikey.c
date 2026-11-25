@@ -172,6 +172,14 @@ int ansi_to_unikey(char *buf, int n)
         return (c == 127)? 8: c;    /* map DEL -> BS */
     }
     if (buf[0] == ESC) {
+        /* ELKS scancode console: ESC a..l; polling ANSI console: ESC [ a..l.
+         * On remote terminals ESC + letter must remain an Alt combination. */
+        if (iselksconsole) {
+            if (n == 2 && buf[1] >= 'a' && buf[1] <= 'l')
+                return kF1 + buf[1] - 'a';
+            if (n == 3 && buf[1] == '[' && buf[2] >= 'a' && buf[2] <= 'l')
+                return kF1 + buf[2] - 'a';
+        }
         if (n == 3 && (buf[1] == 'O' || buf[1] == '[')) {
             switch (buf[2]) {
             case 'P': return kF1;

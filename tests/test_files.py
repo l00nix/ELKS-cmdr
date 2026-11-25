@@ -34,4 +34,9 @@ with tempfile.TemporaryDirectory(prefix='cmdr-') as d:
  run('list',p/'absent',ok=False)
  for seq,key in [('\x1b[A',256),('\x1b[B',257),('\x1b1',280),('\x1b0',289),('\x1bOP',280),('\x1b[15~',284),('\x1b[[A',280)]:
   assert int(run('key',seq))==key
+ for i in range(10):
+  for prefix in ['\x1b','\x1b[']:
+   seq=prefix+chr(ord('a')+i)
+   assert int(run('console-key',seq))==280+i
+   assert int(run('key',seq))==0 # remote Alt-letter must not trigger a command
 print('PASS: binary copy, overwrite/self-copy refusal, cancellation cleanup, move, symlink/device handling, empty-only rmdir, 600-entry directory completeness, sorting and key mappings')

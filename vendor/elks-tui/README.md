@@ -19,7 +19,8 @@ ASCII borders remain in use. No system library is replaced.
   active state to make restoration idempotent, disable bracketed paste on exit,
   and restore using `TCSAFLUSH` (host PTY tests detected pending-input state with
   `TCSADRAIN`). Report terminal setup failure through `tty_init`.
-- `unikey.c`: add SS3, CSI P–S and Linux-console F1–F5 decoding; consume the full
+- `unikey.c`: map ELKS console ESC a..l / ESC [ a..l to function keys only
+  when `iselksconsole` is true, preserving remote Alt-letter combinations; add SS3, CSI P–S and Linux-console F1–F5 decoding; consume the full
   Linux sequence; use 200 ms `select` waits to finish bare Escape and bound
   reads/probes, returning zero on idle timeout and errors to the caller. NoWait
   retains zero-wait polling. Timed reads change upstream blocking semantics and

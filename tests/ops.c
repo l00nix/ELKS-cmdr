@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 #include "cmdr.h"
+#include "unikey.h"
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
@@ -20,7 +21,7 @@ int main(int argc,char **argv) {
         }
         printf("count=%d limited=%d failed=%d\n",panel.count,panel.limited,panel.failed);
         if(!rc){int i;for(i=0;i<panel.count;i++)puts(panel.entries[i].name);}
-    } else if(!strcmp(argv[1],"key")){printf("%d\n",decodekey(argv[2]));return 0;}
+    } else if(!strcmp(argv[1],"key") || !strcmp(argv[1],"console-key")){iselksconsole=!strcmp(argv[1],"console-key");printf("%d\n",decodekey(argv[2]));return 0;}
     else return 2;
     freepanel(&panel);
     if(rc<0){perror("operation");return 1;}return 0;

@@ -1,3 +1,28 @@
+# Development beta 0.4.0-beta2: console function keys
+
+On 25 November 2026, the user tested beta1 on the physical PPC console and
+reported that every requested check passed except the function keys. Their
+photo confirms the beta1 80x25 display, 209 `/bin` entries and visible command
+rows. This is user-reported physical-keyboard evidence, distinct from the
+scripted Telnet tests below.
+
+The ELKS scancode keyboard driver emits ESC a..j for F1..F10; the polling ANSI
+console uses ESC [ a..j. The imported decoder treated ESC + lowercase letter
+as Alt-letter input. Beta2 maps these sequences to function keys only when
+`iselksconsole` is true, leaving remote Alt-letter input unchanged.
+
+- Host file/UI tests: PASS.
+- Native 8086 build and instruction/memory audits: PASS.
+- Native file/UI tests under isolated elksemu: PASS.
+- All ten console function-key encodings, both forms, and unchanged remote
+  behavior checked explicitly: PASS (console detection flag set in test harness).
+
+Beta2 native executable SHA-256:
+`a96767ac3ab8b75090b2958fea31e59c8fc9b48cc8b258c09573580ee603413c`.
+Near-memory budget remains 61,408/65,520 bytes before arguments/environment.
+Physical retest of the fix is pending. The separately staged test executable
+is `/root/cmdr0425/cmdr-fix`; the beta1 and stable installations are retained.
+
 # Development beta 0.4.0-beta1
 
 The beta directly compiles the ELKS TUI import from upstream
@@ -53,7 +78,8 @@ before and after testing. The stable `/bin/cmdr` remains 0.3.0.
 The dimensions and escape sequences were supplied by a scripted Telnet client
 connected to the physical PPC. This tests the actual native executable and
 network terminal path, not physical keyboard events or an interactive terminal
-emulator's key mapping. **Local-console and HP beta tests remain pending.** The
+emulator's key mapping. **The user subsequently confirmed all requested local-console checks except
+function keys on beta1. HP tests remain pending.** The
 exact macOS/QEMU function-key failure reported in the discussion has not been
 reproduced or verified fixed on that setup.
 

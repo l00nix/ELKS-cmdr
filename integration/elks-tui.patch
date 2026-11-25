@@ -81,7 +81,7 @@ index 51cf1c5..8202f29 100644
          tty_fullbuffer();
      return 0;
 diff --git a/vendor/elks-tui/unikey.c b/vendor/elks-tui/unikey.c
-index 2abde24..2749b70 100644
+index 2abde24..25271ea 100644
 --- a/vendor/elks-tui/unikey.c
 +++ b/vendor/elks-tui/unikey.c
 @@ -10,6 +10,8 @@
@@ -115,10 +115,18 @@ index 2abde24..2749b70 100644
      return n;
  }
  
-@@ -167,6 +172,22 @@ int ansi_to_unikey(char *buf, int n)
+@@ -167,6 +172,30 @@ int ansi_to_unikey(char *buf, int n)
          return (c == 127)? 8: c;    /* map DEL -> BS */
      }
      if (buf[0] == ESC) {
++        /* ELKS scancode console: ESC a..l; polling ANSI console: ESC [ a..l.
++         * On remote terminals ESC + letter must remain an Alt combination. */
++        if (iselksconsole) {
++            if (n == 2 && buf[1] >= 'a' && buf[1] <= 'l')
++                return kF1 + buf[1] - 'a';
++            if (n == 3 && buf[1] == '[' && buf[2] >= 'a' && buf[2] <= 'l')
++                return kF1 + buf[2] - 'a';
++        }
 +        if (n == 3 && (buf[1] == 'O' || buf[1] == '[')) {
 +            switch (buf[2]) {
 +            case 'P': return kF1;
@@ -138,7 +146,7 @@ index 2abde24..2749b70 100644
          if (buf[1] == '[') {
              if (n == 3) {                           /* xterm sequences */
                  switch (buf[2]) {                   /* ESC [ A etc */
-@@ -317,29 +338,39 @@ int stream_to_rune(unsigned int ch)
+@@ -317,29 +346,39 @@ int stream_to_rune(unsigned int ch)
   * @see ECMA-48
   */
  
@@ -190,7 +198,7 @@ index 2abde24..2749b70 100644
        return rc;
      }
      buf[i++] = c;
-@@ -391,6 +422,7 @@ int readansi(int fd, char *buf, int size) {
+@@ -391,6 +430,7 @@ int readansi(int fd, char *buf, int size) {
          }
          break;
        case kCsi:
@@ -198,7 +206,7 @@ index 2abde24..2749b70 100644
          switch (c) {
            case ':':
            case ';':
-@@ -523,7 +555,7 @@ static int mouse_to_unikey(int e, int *modkeys)
+@@ -523,7 +563,7 @@ static int mouse_to_unikey(int e, int *modkeys)
    return k;
  }
  
@@ -207,7 +215,7 @@ index 2abde24..2749b70 100644
  {
      return (unsigned) (c - '0') < 10u;
  }
-@@ -545,7 +577,7 @@ int ansi_to_unimouse(char *buf, int n, int *x, int *y, int *modkeys, int *status
+@@ -545,7 +585,7 @@ int ansi_to_unimouse(char *buf, int n, int *x, int *y, int *modkeys, int *status
      if (!startswith(buf, "\033[<") || (buf[n-1] != 'm' && buf[n-1] != 'M'))
          return -1;
      p = buf + 3;
@@ -216,7 +224,7 @@ index 2abde24..2749b70 100644
  
      *status = getparm(p, 0);
      *x = getparm(p, 1) - 1;
-@@ -561,10 +593,10 @@ int ansi_to_unimouse(char *buf, int n, int *x, int *y, int *modkeys, int *status
+@@ -561,10 +601,10 @@ int ansi_to_unimouse(char *buf, int n, int *x, int *y, int *modkeys, int *status
      *status |= (buf[n-1] == 'm') << 7;
      k = mouse_to_unikey(*status, modkeys);
  
@@ -229,7 +237,7 @@ index 2abde24..2749b70 100644
              && (tick - lasttick) < kDoubleClickTime) {
              k = kMouseLeftDoubleClick;
          }
-@@ -589,6 +621,12 @@ int ansi_dsr(char *buf, int n, int *cols, int *rows)
+@@ -589,6 +629,12 @@ int ansi_dsr(char *buf, int n, int *cols, int *rows)
      if (n < 6 || !startswith(buf, "\033[") || buf[n-1] != 'R')
          return -1;
      p = buf + 2;
@@ -242,7 +250,7 @@ index 2abde24..2749b70 100644
      r = getparm(p, 0);
      c = getparm(p, 1);
      //printf("DSR terminal size is %dx%d\r\n", r, c);
-@@ -606,8 +644,17 @@ int ansi_dsr(char *buf, int n, int *cols, int *rows)
+@@ -606,8 +652,17 @@ int ansi_dsr(char *buf, int n, int *cols, int *rows)
  int tty_getsize(int *cols, int *rows)
  {
      int n, x, y;
@@ -262,7 +270,7 @@ index 2abde24..2749b70 100644
      WRITE(1, PROBE_DISPLAY_SIZE);
      if ((n = readansi(0, buf, sizeof(buf))) > 0) {
          if (ansi_dsr(buf, n, &x, &y) > 0) {
-@@ -615,6 +662,8 @@ int tty_getsize(int *cols, int *rows)
+@@ -615,6 +670,8 @@ int tty_getsize(int *cols, int *rows)
              *rows = y;
              return 1;
          }

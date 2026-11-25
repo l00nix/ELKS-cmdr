@@ -7,13 +7,15 @@ The executable is **`cmdr`** (formerly `elxcmd` / ELX Commander).
 It uses terminal interfaces rather than HP firmware, so it can run on other ELKS
 machines with a suitable console or serial terminal.
 
-## Development beta: 0.4.0-beta1
+## Development beta: 0.4.0-beta2
 
 This branch imports the ELKS TUI sources following
 [Ghaerr's suggested integration](https://github.com/ghaerr/elks/discussions/2859#discussioncomment-19877552).
 The unchanged import is a separate commit, followed by cmdr integration and a
 reviewable [patch to the imported sources](integration/elks-tui.patch).
 
+- Beta2 adds the ELKS local-console function-key encoding missing in beta1;
+  physical-keyboard confirmation of this fix is pending.
 - Direct `1`–`9` command keys and `0` to quit; simpler help. Function keys and
   existing letter shortcuts remain available. Digits in path/name prompts are literal.
 - Upstream TUI terminal setup and ANSI key decoding, with bounded waits for bare
@@ -23,10 +25,10 @@ reviewable [patch to the imported sources](integration/elks-tui.patch).
   to 80×25. `R` refreshes the terminal size as well as directory listings.
 - Bracketed paste is ignored, preventing pasted text from executing panel commands.
 
-The stable download and 8088retro EPT package remain **0.3.0**. The beta passed
+The stable download and 8088retro EPT package remain **0.3.0**. Beta1 passed
 physical PPC Telnet checks, including 209 entries per panel, size detection,
-file operations and terminal restoration. Local-console/HP checks remain
-pending; see [beta test results](docs/TESTING.md). Image-viewer
+file operations and terminal restoration. The user confirmed the local display and other controls, but found function
+keys inoperative in beta1. Beta2 retesting and HP checks remain pending; see [beta test results](docs/TESTING.md). Image-viewer
 integration and CP437/Unicode borders are deferred; ASCII borders remain in use.
 
 ## Changes in 0.3.0
